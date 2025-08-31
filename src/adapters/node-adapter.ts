@@ -1,0 +1,184 @@
+
+import { BaseAdapter } from './base-adapter';
+import { SQLiteConnection, SQLiteResult, SQLiteRow } from '../types';
+
+class NodeSQLiteConnection implements SQLiteConnection {
+  private db: any;
+
+  constructor(db: any) {
+    this.db = db;
+  }
+
+  async execute(sql: string, params?: any[]): Promise<SQLiteResult> {
+    return new Promise((resolve, reject) => {
+      const sanitizedSQL = this.bindParameters(sql, params);
+      
+      if (sql.toLowerCase().trim().startsWith('select')) {
+        this.db.all(sanitizedSQL, (err: any, rows: SQLiteRow[]) => {
+          if (err) {
+            reject(new Error(SQLite error: ));
+          } else {
+            resolve({
+              rows: rows || [],
+              rowsAffected: 0
+            });
+          }
+        });
+      } else {
+        this.db.run(sanitizedSQL, function(this: any, err: any) {
+          if (err) {
+            reject(new Error(SQLite error: ));
+          } else {
+            resolve({
+              rows: [],
+              rowsAffected: this.changes || 0,
+              lastInsertRowId: this.lastID
+            });
+          }
+        });
+      }
+    });
+  }
+
+  private bindParameters(sql: string, params?: any[]): string {
+    if (!params || params.length === 0) {
+      return sql;
+    }
+
+    let paramIndex = 0;
+    return sql.replace(/\?/g, () => {
+      if (paramIndex < params.length) {
+        const param = params[paramIndex++];
+        if (typeof param === 'string') {
+          return '';
+        }
+        if (param === null || param === undefined) {
+          return 'NULL';
+        }
+        return String(param);
+      }
+      return '?';
+    });
+  }
+
+  async close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.close((err: any) => {
+        if (err) {
+          reject(new Error(Error closing database: ));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+}
+
+export class NodeAdapter extends BaseAdapter {
+  isSupported(): boolean {
+    try {
+      return typeof require !== 'undefined' && require('sqlite3') !== undefined;
+    } catch {
+      return false;
+    }
+  }
+
+  async connect(path: string): Promise<SQLiteConnection> {
+    return new Promise((resolve, reject) => {
+      try {
+        const sqlite3 = require('sqlite3').verbose();
+        const db = new sqlite3.Database(path, (err: any) => {
+          if (err) {
+            reject(new Error(Cannot connect to database: ));
+          } else {
+            resolve(new NodeSQLiteConnection(db));
+          }
+        });
+      } catch (error) {
+        reject(new Error(SQLite3 module not available: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
++ " | Set-Content -Path "src/types.ts"
++                        ~~~~~~~~~~~~~
+Unexpected token 'src/types.ts"
+}
+  busyTimeout?: number;
+  timeout?: number;
+  path: string;
+export interface SQLiteConfig {
+
+}
+  isSupported(): boolean;
+  connect(path: string): Promise<SQLiteConnection>;
+export interface SQLiteAdapter {
+
+}
+  close(): Promise<void>;
+  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
+export interface SQLiteConnection {
+
+}
+  lastInsertRowId?: number;
+  rowsAffected: number;
+  rows: SQLiteRow[];
+export interface SQLiteResult {
+
+}
+  [key: string]: any;
+export interface SQLiteRow {
+"' in expression or statement.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
++ cat << 'EOF' > src/adapters/base-adapter.ts
++      ~
+Missing file specification after redirection operator.
+
+At line:1 char:5
++ cat << 'EOF' > src/adapters/base-adapter.ts
++     ~
+The '<' operator is reserved for future use.
+
+At line:1 char:6
++ cat << 'EOF' > src/adapters/base-adapter.ts
++      ~
+The '<' operator is reserved for future use.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
++   isSupported(): boolean;
++               ~
+An expression was expected after '('.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
++   close(): Promise<void>;
++         ~
+An expression was expected after '('.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
++   [key: string]: any;
++      ~
+Missing ] at end of attribute or type literal.
+
+At line:2 char:7
++   [key: string]: any;
++       ~
+Unexpected token ':' in expression or statement.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
++ cat << 'EOF' > src/types.ts
++      ~
+Missing file specification after redirection operator.
+
+At line:1 char:5
++ cat << 'EOF' > src/types.ts
++     ~
+The '<' operator is reserved for future use.
+
+At line:1 char:6
++ cat << 'EOF' > src/types.ts
++      ~
+The '<' operator is reserved for future use.
+   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
+   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.));
+      }
+    });
+  }
+}
+

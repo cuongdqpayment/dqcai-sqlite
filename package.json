@@ -1,0 +1,60 @@
+{
+  "name": "@dqcai/sqlite",
+  "version": "1.0.0",
+  "description": "Universal SQLite adapter for Node.js, Browser, Deno, Bun, and React Native with a unified API and query builder.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "module": "lib/index.mjs",
+  "scripts": {
+    "build": "rollup -c rollup.config.mjs",
+    "clean": "rimraf lib",
+    "prebuild": "npm run clean"  
+  },
+  "keywords": [
+    "sqlite",
+    "dqcai",
+    "doanquoccuong",
+    "cuongdq",
+    "node",
+    "browser",
+    "deno",
+    "bun",
+    "react-native",
+    "expo",
+    "universal",
+    "database",
+    "query-builder"
+  ],
+  "author": "Đoàn Quốc Cường",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cuongdqpayment/dqcai-sqlite.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cuongdqpayment/dqcai-sqlite/issues"
+  },
+  "homepage": "https://github.com/cuongdqpayment/dqcai-sqlite#readme",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/node": "^18.0.0",
+    "esbuild": "^0.25.9",
+    "javascript-obfuscator": "^4.1.1",
+    "obfuscate": "^0.0.11",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.49.0",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "expo-sqlite": "^13.0.0",
+    "react-native-sqlite-storage": "^6.0.1",
+    "sqlite3": "^5.1.7",
+    "bun-types": "^1.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
