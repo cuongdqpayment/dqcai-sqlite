@@ -7,7 +7,7 @@ export { QueryBuilder } from './query-builder';
 export * from './types';
 
 // Example usage and main export
-export default class UniversalSQLite {
+export default class UniversalSqlite {
   private manager: SQLiteManager;
   private connection: SQLiteConnection | null = null;
 
