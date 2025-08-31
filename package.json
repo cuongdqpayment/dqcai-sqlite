@@ -1,14 +1,37 @@
 {
   "name": "@dqcai/sqlite",
   "version": "1.0.0",
+  "type": "module",
   "description": "Universal SQLite adapter for Node.js, Browser, Deno, Bun, and React Native with a unified API and query builder.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "module": "lib/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.mjs",
+      "require": "./lib/index.js",
+      "browser": "./lib/index.umd.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./lib/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "README.md"
+  ],
   "scripts": {
-    "build": "rollup -c rollup.config.mjs",
+    "build": "rollup -c rollup.config.js",
     "clean": "rimraf lib",
-    "prebuild": "npm run clean"  
+    "prebuild": "npm run clean",
+    "obfuscate": "node ./scripts/obfuscate.mjs",
+    "prepublishOnly": "npm run build && npm run obfuscate",
+    "release": "npm publish --access public"
   },
   "keywords": [
     "sqlite",

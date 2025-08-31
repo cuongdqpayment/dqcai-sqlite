@@ -21,7 +21,7 @@ export default {
     {
       file: 'lib/index.umd.js', // UMD cho browser và hybrid
       format: 'umd',
-      name: 'Sqlite', // Tên global variable cho browser
+      name: 'UniversalSqlite', // Tên global variable cho browser
       sourcemap: true,
     },
   ],
