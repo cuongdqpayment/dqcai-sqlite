@@ -1,4 +1,4 @@
-
+import { SQLiteAdapter, SQLiteConnection, SQLiteConfig } from '../types';
 export abstract class BaseAdapter implements SQLiteAdapter {
   abstract connect(path: string): Promise<SQLiteConnection>;
   abstract isSupported(): boolean;
@@ -18,7 +18,7 @@ export abstract class BaseAdapter implements SQLiteAdapter {
       if (paramIndex < params.length) {
         const param = params[paramIndex++];
         if (typeof param === 'string') {
-          return '';
+          return `'${param.replace(/'/g, "''")}'`;
         }
         if (param === null || param === undefined) {
           return 'NULL';
@@ -29,4 +29,3 @@ export abstract class BaseAdapter implements SQLiteAdapter {
     });
   }
 }
-

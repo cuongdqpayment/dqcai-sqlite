@@ -1,4 +1,3 @@
-
 export class QueryBuilder {
   private tableName = '';
   private selectFields: string[] = ['*'];
@@ -24,7 +23,7 @@ export class QueryBuilder {
   }
 
   orderBy(field: string, direction: 'ASC' | 'DESC' = 'ASC'): QueryBuilder {
-    this.orderByFields.push(${field} );
+    this.orderByFields.push(`${field} ${direction}`);
     return this;
   }
 
@@ -39,22 +38,22 @@ export class QueryBuilder {
   }
 
   toSQL(): string {
-    let sql = SELECT  FROM ;
+    let sql = `SELECT ${this.selectFields.join(', ')} FROM ${this.tableName}`;
     
     if (this.whereConditions.length > 0) {
-      sql +=  WHERE ;
+      sql += ` WHERE ${this.whereConditions.join(' AND ')}`;
     }
     
     if (this.orderByFields.length > 0) {
-      sql +=  ORDER BY ;
+      sql += ` ORDER BY ${this.orderByFields.join(', ')}`;
     }
     
     if (this.limitValue !== null) {
-      sql +=  LIMIT ;
+      sql += ` LIMIT ${this.limitValue}`;
     }
     
     if (this.offsetValue !== null) {
-      sql +=  OFFSET ;
+      sql += ` OFFSET ${this.offsetValue}`;
     }
     
     return sql;
@@ -66,16 +65,15 @@ export class QueryBuilder {
     const values = Object.values(data);
     const placeholders = values.map(() => '?').join(', ');
     
-    return INSERT INTO  () VALUES ();
+    return `INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
   }
 
   static update(tableName: string, data: Record<string, any>, where: string): string {
-    const sets = Object.keys(data).map(key => ${key} = ?).join(', ');
-    return UPDATE  SET  WHERE ;
+    const sets = Object.keys(data).map(key => `${key} = ?`).join(', ');
+    return `UPDATE ${tableName} SET ${sets} WHERE ${where}`;
   }
 
   static delete(tableName: string, where: string): string {
-    return DELETE FROM  WHERE ;
+    return `DELETE FROM ${tableName} WHERE ${where}`;
   }
 }
-

@@ -1,3 +1,4 @@
+# Source code all for @dqcai/sqlite 
 ```ts
 // src/types.ts
 export interface SQLiteRow {
@@ -24,6 +25,43 @@ export interface SQLiteConfig {
   path: string;
   timeout?: number;
   busyTimeout?: number;
+}
+
+// Global type declarations for different environments
+declare global {
+  // Browser environment
+  interface Window {
+    SQL?: any;
+    initSqlJs?: (config?: any) => Promise<any>;
+    openDatabase?: (name: string, version: string, displayName: string, estimatedSize: number) => any;
+  }
+
+  // Deno environment
+  var Deno: {
+    env: any;
+    version?: { deno: string };
+    [key: string]: any;
+  } | undefined;
+
+  // Bun environment
+  var Bun: {
+    version: string;
+    [key: string]: any;
+  } | undefined;
+
+  // React Native Windows
+  var Windows: any;
+  
+  // React Native Platform
+  var Platform: {
+    OS: string;
+    Version?: string;
+  } | undefined;
+
+  // Navigator (React Native detection)
+  var navigator: {
+    product?: string;
+  } | undefined;
 }
 
 // src/adapters/base-adapter.ts
@@ -168,9 +206,11 @@ import { SQLiteConnection, SQLiteResult, SQLiteRow } from '../types';
 class BrowserSQLiteConnection implements SQLiteConnection {
   private worker: Worker | null = null;
   private db: any = null;
+  private adapter: BrowserAdapter;
 
-  constructor(db: any, worker?: Worker) {
+  constructor(db: any, adapter: BrowserAdapter, worker?: Worker) {
     this.db = db;
+    this.adapter = adapter;
     this.worker = worker || null;
   }
 
@@ -180,7 +220,7 @@ class BrowserSQLiteConnection implements SQLiteConnection {
     }
 
     try {
-      const boundSQL = super.bindParameters ? super.bindParameters(sql, params) : this.bindParameters(sql, params);
+      const boundSQL = this.adapter.bindParameters(sql, params);
       
       if (sql.toLowerCase().trim().startsWith('select')) {
         const result = this.db.exec(boundSQL);
@@ -215,27 +255,6 @@ class BrowserSQLiteConnection implements SQLiteConnection {
     }
   }
 
-  private bindParameters(sql: string, params?: any[]): string {
-    if (!params || params.length === 0) {
-      return sql;
-    }
-
-    let paramIndex = 0;
-    return sql.replace(/\?/g, () => {
-      if (paramIndex < params.length) {
-        const param = params[paramIndex++];
-        if (typeof param === 'string') {
-          return `'${param.replace(/'/g, "''")}'`;
-        }
-        if (param === null || param === undefined) {
-          return 'NULL';
-        }
-        return String(param);
-      }
-      return '?';
-    });
-  }
-
   async close(): Promise<void> {
     if (this.db) {
       this.db.close();
@@ -256,11 +275,16 @@ export class BrowserAdapter extends BaseAdapter {
            (typeof window.SQL !== 'undefined' || this.sqlJs !== null);
   }
 
+  // Make bindParameters public so BrowserSQLiteConnection can access it
+  public bindParameters(sql: string, params?: any[]): string {
+    return super.bindParameters(sql, params);
+  }
+
   async connect(path: string): Promise<SQLiteConnection> {
     try {
       // Try to load sql.js if not already loaded
       if (!this.sqlJs) {
-        if (typeof window.SQL !== 'undefined') {
+        if (window.SQL) {
           this.sqlJs = window.SQL;
         } else {
           // Try to load from CDN
@@ -274,12 +298,12 @@ export class BrowserAdapter extends BaseAdapter {
         // In-memory database
         db = new this.sqlJs.Database();
       } else {
-        // Try to load from file or localStorage
+        // Try to load from file
         const data = await this.loadDatabaseFile(path);
         db = new this.sqlJs.Database(data);
       }
 
-      return new BrowserSQLiteConnection(db);
+      return new BrowserSQLiteConnection(db, this);
     } catch (error) {
       throw new Error(`Cannot connect to browser database: ${error}`);
     }
@@ -291,9 +315,11 @@ export class BrowserAdapter extends BaseAdapter {
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js';
       script.onload = async () => {
         try {
-          this.sqlJs = await window.initSqlJs({
-            locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-          });
+          if (window.initSqlJs) {
+            this.sqlJs = await window.initSqlJs({
+              locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+            });
+          }
           resolve();
         } catch (err) {
           reject(err);
@@ -305,12 +331,6 @@ export class BrowserAdapter extends BaseAdapter {
   }
 
   private async loadDatabaseFile(path: string): Promise<Uint8Array | undefined> {
-    // Try localStorage first
-    const stored = localStorage.getItem(`sqlite_db_${path}`);
-    if (stored) {
-      return new Uint8Array(JSON.parse(stored));
-    }
-
     // Try to fetch as a file
     try {
       const response = await fetch(path);
@@ -390,7 +410,8 @@ class DenoSQLiteConnection implements SQLiteConnection {
 export class DenoAdapter extends BaseAdapter {
   isSupported(): boolean {
     try {
-      return typeof Deno !== 'undefined' && Deno.env !== undefined;
+      return typeof globalThis.Deno !== 'undefined' && 
+             globalThis.Deno.env !== undefined;
     } catch {
       return false;
     }
@@ -398,7 +419,7 @@ export class DenoAdapter extends BaseAdapter {
 
   async connect(path: string): Promise<SQLiteConnection> {
     try {
-      // Dynamic import for Deno SQLite
+      // @ts-ignore - Bỏ qua type checking cho dòng này
       const { DB } = await import('https://deno.land/x/sqlite@v3.8.0/mod.ts');
       const db = new DB(path);
       return new DenoSQLiteConnection(db);
@@ -450,7 +471,8 @@ class BunSQLiteConnection implements SQLiteConnection {
 export class BunAdapter extends BaseAdapter {
   isSupported(): boolean {
     try {
-      return typeof Bun !== 'undefined' && Bun.version !== undefined;
+      return typeof globalThis.Bun !== 'undefined' && 
+             globalThis.Bun.version !== undefined;
     } catch {
       return false;
     }
@@ -774,19 +796,32 @@ export class ReactNativeAdapter extends BaseAdapter {
         typeof navigator !== 'undefined' && 
         navigator.product === 'ReactNative' &&
         (
-          // Windows-specific checks
-          typeof Windows !== 'undefined' ||
-          (typeof require !== 'undefined' && 
-           (() => {
-             try {
-               require('react-native-windows');
-               return true;
-             } catch {
-               return false;
-             }
-           })()) ||
+          // Windows global object check
+          typeof globalThis.Windows !== 'undefined' ||
+          // React Native Windows module check
+          (() => {
+            try {
+              if (typeof require !== 'undefined') {
+                require('react-native-windows');
+                return true;
+              }
+            } catch {
+              return false;
+            }
+            return false;
+          })() ||
           // Platform module check
-          (typeof Platform !== 'undefined' && Platform.OS === 'windows')
+          (() => {
+            try {
+              if (typeof require !== 'undefined') {
+                const { Platform } = require('react-native');
+                return Platform && Platform.OS === 'windows';
+              }
+            } catch {
+              return false;
+            }
+            return false;
+          })()
         )
       );
     } catch {
@@ -937,6 +972,9 @@ export class ReactNativeAdapter extends BaseAdapter {
 
   private async connectWebView(path: string): Promise<SQLiteConnection> {
     try {
+      if (!window.openDatabase) {
+        throw new Error('WebView openDatabase not available');
+      }
       const db = window.openDatabase(path, '1.0', 'Database', 2 * 1024 * 1024);
       return new ReactNativeSQLiteConnection(db, path);
     } catch (error) {
@@ -952,6 +990,18 @@ import { BrowserAdapter } from './adapters/browser-adapter';
 import { DenoAdapter } from './adapters/deno-adapter';
 import { BunAdapter } from './adapters/bun-adapter';
 import { ReactNativeAdapter } from './adapters/react-native-adapter';
+
+// Type declarations for React Native globals
+declare global {
+  var Windows: any;
+  var Platform: {
+    OS: string;
+    Version?: string;
+  };
+  var navigator: {
+    product?: string;
+  };
+}
 
 export class SQLiteManager {
   private adapters: SQLiteAdapter[] = [];
@@ -991,18 +1041,57 @@ export class SQLiteManager {
   }
 
   getEnvironmentInfo(): string {
-    if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
-      // Detect specific React Native environment
-      if (typeof Windows !== 'undefined') return 'React Native Windows';
-      if (typeof Platform !== 'undefined' && Platform.OS === 'windows') return 'React Native Windows';
-      return 'React Native';
+    try {
+      // Safe check for React Native
+      if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+        // Safe check for Windows environment
+        if (typeof globalThis.Windows !== 'undefined') {
+          return 'React Native Windows';
+        }
+        
+        // Safe check for Platform API
+        try {
+          // Try to import Platform from react-native if available
+          const Platform = this.getPlatform();
+          if (Platform && Platform.OS === 'windows') {
+            return 'React Native Windows';
+          }
+        } catch {
+          // Platform not available, continue
+        }
+        
+        return 'React Native';
+      }
+      
+      if (typeof globalThis.Bun !== 'undefined') return 'Bun';
+      if (typeof globalThis.Deno !== 'undefined') return 'Deno';
+      if (typeof window !== 'undefined') return 'Browser';
+      if (typeof process !== 'undefined') return 'Node.js';
+      return 'Unknown';
+    } catch {
+      return 'Unknown';
     }
-    if (typeof Bun !== 'undefined') return 'Bun';
-    if (typeof Deno !== 'undefined') return 'Deno';
-    if (typeof window !== 'undefined') return 'Browser';
-    if (typeof process !== 'undefined') return 'Node.js';
-    return 'Unknown';
   }
+
+  private getPlatform(): any {
+    try {
+      // Try to require Platform from react-native
+      if (typeof require !== 'undefined') {
+        const { Platform } = require('react-native');
+        return Platform;
+      }
+    } catch {
+      // react-native not available
+    }
+    
+    // Try global Platform
+    try {
+      return globalThis.Platform;
+    } catch {
+      return null;
+    }
+  }
+}
 }
 
 // src/query-builder.ts
@@ -1155,4 +1244,5 @@ export default class UniversalSQLite {
     return await this.query(sql, params);
   }
 }
+
 ```

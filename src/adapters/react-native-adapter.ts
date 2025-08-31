@@ -1,4 +1,3 @@
-
 import { BaseAdapter } from './base-adapter';
 import { SQLiteConnection, SQLiteResult, SQLiteRow } from '../types';
 
@@ -36,94 +35,13 @@ class ReactNativeSQLiteConnection implements SQLiteConnection {
               });
             },
             (tx: any, error: any) => {
-              reject(new Error(SQLite error: ));
+              reject(new Error(`SQLite error: ${error.message}`));
               return false;
             }
           );
         });
       } catch (error) {
-        reject(new Error(SQLite execution error: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.));
+        reject(new Error(`SQLite execution error: ${error}`));
       }
     });
   }
@@ -138,7 +56,7 @@ The '<' operator is reserved for future use.
       if (paramIndex < params.length) {
         const param = params[paramIndex++];
         if (typeof param === 'string') {
-          return '';
+          return `'${param.replace(/'/g, "''")}'`;
         }
         if (param === null || param === undefined) {
           return 'NULL';
@@ -154,7 +72,7 @@ The '<' operator is reserved for future use.
       if (this.db && this.db.close) {
         this.db.close(
           () => resolve(),
-          (error: any) => reject(new Error(Error closing database: ))
+          (error: any) => reject(new Error(`Error closing database: ${error.message}`))
         );
       } else {
         resolve();
@@ -192,7 +110,7 @@ class ReactNativeSQLiteStorageConnection implements SQLiteConnection {
           });
         },
         (error: any) => {
-          reject(new Error(SQLite error: ));
+          reject(new Error(`SQLite error: ${error.message}`));
         }
       );
     });
@@ -238,88 +156,7 @@ class ExpoSQLiteConnection implements SQLiteConnection {
         rowsAffected: 0
       };
     } catch (error) {
-      throw new Error(SQLite error: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.);
+      throw new Error(`SQLite error: ${error}`);
     }
   }
 
@@ -355,88 +192,7 @@ class ReactNativeWindowsSQLiteConnection implements SQLiteConnection {
         };
       }
     } catch (error) {
-      throw new Error(SQLite error: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.);
+      throw new Error(`SQLite error: ${error}`);
     }
   }
 
@@ -464,7 +220,7 @@ class ReactNativeSQLite2Connection implements SQLiteConnection {
           if (results && results[0]) {
             const result = results[0];
             if (result.error) {
-              reject(new Error(SQLite error: ));
+              reject(new Error(`SQLite error: ${result.error.message}`));
             } else {
               resolve({
                 rows: result.rows || [],
@@ -548,19 +304,32 @@ export class ReactNativeAdapter extends BaseAdapter {
         typeof navigator !== 'undefined' && 
         navigator.product === 'ReactNative' &&
         (
-          // Windows-specific checks
-          typeof Windows !== 'undefined' ||
-          (typeof require !== 'undefined' && 
-            (() => {
-             try {
-               require('react-native-windows');
-               return true;
-             } catch {
-               return false;
-             }
-            })()) ||
+          // Windows global object check
+          typeof globalThis.Windows !== 'undefined' ||
+          // React Native Windows module check
+          (() => {
+            try {
+              if (typeof require !== 'undefined') {
+                require('react-native-windows');
+                return true;
+              }
+            } catch {
+              return false;
+            }
+            return false;
+          })() ||
           // Platform module check
-          (typeof Platform !== 'undefined' && Platform.OS === 'windows')
+          (() => {
+            try {
+              if (typeof require !== 'undefined') {
+                const { Platform } = require('react-native');
+                return Platform && Platform.OS === 'windows';
+              }
+            } catch {
+              return false;
+            }
+            return false;
+          })()
         )
       );
     } catch {
@@ -654,92 +423,11 @@ export class ReactNativeAdapter extends BaseAdapter {
             resolve(new ReactNativeSQLite2Connection(db));
           },
           (error: any) => {
-            reject(new Error(Cannot connect to React Native SQLite-2: ));
+            reject(new Error(`Cannot connect to React Native SQLite-2: ${error.message}`));
           }
         );
       } catch (error) {
-        reject(new Error(React Native SQLite-2 not available: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.));
+        reject(new Error(`React Native SQLite-2 not available: ${error}`));
       }
     });
   }
@@ -753,88 +441,7 @@ The '<' operator is reserved for future use.
       });
       return new ReactNativeWindowsSQLiteConnection(db);
     } catch (error) {
-      throw new Error(Cannot connect to React Native Windows SQLite: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.);
+      throw new Error(`Cannot connect to React Native Windows SQLite: ${error}`);
     }
   }
 
@@ -844,88 +451,7 @@ The '<' operator is reserved for future use.
       const db = SQLite.openDatabaseSync(path);
       return new ExpoSQLiteConnection(db);
     } catch (error) {
-      throw new Error(Cannot connect to Expo SQLite database: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.);
+      throw new Error(`Cannot connect to Expo SQLite database: ${error}`);
     }
   }
 
@@ -944,183 +470,23 @@ The '<' operator is reserved for future use.
         }).then((db: any) => {
           resolve(new ReactNativeSQLiteStorageConnection(db));
         }).catch((error: any) => {
-          reject(new Error(Cannot connect to React Native SQLite database: ));
+          reject(new Error(`Cannot connect to React Native SQLite database: ${error.message}`));
         });
       } catch (error) {
-        reject(new Error(React Native SQLite Storage not available: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.));
+        reject(new Error(`React Native SQLite Storage not available: ${error}`));
       }
     });
   }
 
   private async connectWebView(path: string): Promise<SQLiteConnection> {
     try {
+      if (!window.openDatabase) {
+        throw new Error('WebView openDatabase not available');
+      }
       const db = window.openDatabase(path, '1.0', 'Database', 2 * 1024 * 1024);
       return new ReactNativeSQLiteConnection(db, path);
     } catch (error) {
-      throw new Error(Cannot connect to WebView SQLite database: An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists. An item with the specified name D:\ReactNative\dqcai-sqlite\src\adapters already exists. System.Management.Automation.ParseException: At line:1 char:24
-+ " | Set-Content -Path "src/types.ts"
-+                        ~~~~~~~~~~~~~
-Unexpected token 'src/types.ts"
-}
-  busyTimeout?: number;
-  timeout?: number;
-  path: string;
-export interface SQLiteConfig {
-
-}
-  isSupported(): boolean;
-  connect(path: string): Promise<SQLiteConnection>;
-export interface SQLiteAdapter {
-
-}
-  close(): Promise<void>;
-  execute(sql: string, params?: any[]): Promise<SQLiteResult>;
-export interface SQLiteConnection {
-
-}
-  lastInsertRowId?: number;
-  rowsAffected: number;
-  rows: SQLiteRow[];
-export interface SQLiteResult {
-
-}
-  [key: string]: any;
-export interface SQLiteRow {
-"' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/adapters/base-adapter.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'EOF' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:3 char:15
-+   isSupported(): boolean;
-+               ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:3 char:9
-+   close(): Promise<void>;
-+         ~
-An expression was expected after '('.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again. System.Management.Automation.ParseException: At line:2 char:6
-+   [key: string]: any;
-+      ~
-Missing ] at end of attribute or type literal.
-
-At line:2 char:7
-+   [key: string]: any;
-+       ~
-Unexpected token ':' in expression or statement.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) System.Management.Automation.ParseException: At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-Missing file specification after redirection operator.
-
-At line:1 char:5
-+ cat << 'EOF' > src/types.ts
-+     ~
-The '<' operator is reserved for future use.
-
-At line:1 char:6
-+ cat << 'EOF' > src/types.ts
-+      ~
-The '<' operator is reserved for future use.
-   at System.Management.Automation.Runspaces.PipelineBase.Invoke(IEnumerable input)
-   at Microsoft.PowerShell.Executor.ExecuteCommandHelper(Pipeline tempPipeline, Exception& exceptionThrown, ExecutionOptions options) An item with the specified name D:\ReactNative\dqcai-sqlite\src already exists.);
+      throw new Error(`Cannot connect to WebView SQLite database: ${error}`);
     }
   }
 }
-
