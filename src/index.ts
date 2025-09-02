@@ -1,72 +1,75 @@
-import { QueryBuilder } from './query-builder';
-import { SQLiteManager } from './sqlite-manager';
-import { SQLiteConnection } from './types';
+import { DatabaseManager, UniversalDAO, BaseService, DatabaseFactory } from './core';
+import { QueryBuilder } from './query/query-builder';
+import { SQLiteAdapter, SQLiteResult, DatabaseSchema } from './types';
+import { MigrationManager, CSVImporter } from './utils';
 
-export { SQLiteManager } from './sqlite-manager';
-export { QueryBuilder } from './query-builder';
+// src/index.ts - Main exports
+export { UniversalDAO, DatabaseFactory, DatabaseManager, BaseService } from './core';
+export { QueryBuilder } from './query/query-builder';
+export { MigrationManager, type Migration, CSVImporter } from './utils';
+export { BaseAdapter } from './adapters/base-adapter';
+
+// Re-export all types
 export * from './types';
 
-// Example usage and main export
-export default class UniversalSqlite {
-  private manager: SQLiteManager;
-  private connection: SQLiteConnection | null = null;
+// Example unified interface class
+export default class UniversalSQLite {
+  private manager: DatabaseManager;
+  private currentDAO: UniversalDAO | null = null;
 
   constructor() {
-    this.manager = new SQLiteManager();
+    this.manager = new DatabaseManager();
   }
 
-  async connect(path: string): Promise<void> {
-    this.connection = await this.manager.connect(path);
+  async connect(dbPath: string, options?: { adapter?: SQLiteAdapter }): Promise<void> {
+    this.currentDAO = await this.manager.getConnection(dbPath, options);
   }
 
-  async query(sql: string, params?: any[]) {
-    if (!this.connection) {
-      throw new Error('Database not connected');
+  async disconnect(): Promise<void> {
+    if (this.currentDAO) {
+      const connections = this.manager.listConnections();
+      for (const conn of connections) {
+        await this.manager.closeConnection(conn);
+      }
+      this.currentDAO = null;
     }
-    return await this.connection.execute(sql, params);
   }
 
-  async close(): Promise<void> {
-    if (this.connection) {
-      await this.connection.close();
-      this.connection = null;
+  getDAO(): UniversalDAO {
+    if (!this.currentDAO) {
+      throw new Error('Database not connected. Call connect() first.');
     }
+    return this.currentDAO;
+  }
+
+  createService<T = any>(tableName: string): BaseService<T> {
+    return new (class extends BaseService<T> { })(this.getDAO(), tableName);
+  }
+
+  query(): QueryBuilder {
+    if (!this.currentDAO) {
+      throw new Error('Database not connected. Call connect() first.');
+    }
+    return new QueryBuilder();
+  }
+
+  async execute(sql: string, params?: any[]): Promise<SQLiteResult> {
+    return await this.getDAO().execute(sql, params);
+  }
+
+  async initializeSchema(schema: DatabaseSchema): Promise<void> {
+    await this.getDAO().initializeFromSchema(schema);
+  }
+
+  createMigrationManager(): MigrationManager {
+    return new MigrationManager(this.getDAO());
+  }
+
+  createCSVImporter(): CSVImporter {
+    return new CSVImporter(this.getDAO());
   }
 
   getEnvironment(): string {
-    return this.manager.getEnvironmentInfo();
-  }
-
-  // Convenience methods
-  async createTable(name: string, schema: Record<string, string>): Promise<void> {
-    const fields = Object.entries(schema)
-      .map(([field, type]) => `${field} ${type}`)
-      .join(', ');
-    
-    await this.query(`CREATE TABLE IF NOT EXISTS ${name} (${fields})`);
-  }
-
-  async insert(table: string, data: Record<string, any>) {
-    const sql = QueryBuilder.insert(table, data);
-    return await this.query(sql, Object.values(data));
-  }
-
-  async select(table: string, where?: string, params?: any[]) {
-    let sql = `SELECT * FROM ${table}`;
-    if (where) {
-      sql += ` WHERE ${where}`;
-    }
-    return await this.query(sql, params);
-  }
-
-  async update(table: string, data: Record<string, any>, where: string, whereParams?: any[]) {
-    const sql = QueryBuilder.update(table, data, where);
-    const params = [...Object.values(data), ...(whereParams || [])];
-    return await this.query(sql, params);
-  }
-
-  async delete(table: string, where: string, params?: any[]) {
-    const sql = QueryBuilder.delete(table, where);
-    return await this.query(sql, params);
+    return DatabaseFactory.getEnvironmentInfo();
   }
 }

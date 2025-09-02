@@ -1,4 +1,4 @@
-// src/types.ts
+// src/types/core.ts
 export interface SQLiteRow {
   [key: string]: any;
 }
@@ -19,10 +19,127 @@ export interface SQLiteAdapter {
   isSupported(): boolean;
 }
 
-export interface SQLiteConfig {
-  path: string;
-  timeout?: number;
-  busyTimeout?: number;
+// Enhanced schema types based on SQLiteDAO
+export interface TypeMappingConfig {
+  type_mapping: {
+    [targetType: string]: {
+      [sourceType: string]: string;
+    };
+  };
+}
+
+export interface ColumnDefinition {
+  name: string;
+  type: string;
+  option_key?: string;
+  description?: string;
+  nullable?: boolean;
+  default?: any;
+  primary_key?: boolean;
+  auto_increment?: boolean;
+  unique?: boolean;
+  constraints?: string;
+  length?: number;
+}
+
+export interface Column {
+  name: string;
+  value?: any;
+}
+
+export interface WhereClause {
+  name: string;
+  value: any;
+  operator?: string;
+}
+
+export interface OrderByClause {
+  name: string;
+  direction?: 'ASC' | 'DESC';
+}
+
+export interface LimitOffset {
+  limit?: number;
+  offset?: number;
+}
+
+export interface QueryTable {
+  name: string;
+  cols: Column[];
+  wheres?: WhereClause[];
+  orderbys?: OrderByClause[];
+  limitOffset?: LimitOffset;
+}
+
+export interface JoinClause {
+  type: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL';
+  table: string;
+  on: string;
+}
+
+export interface IndexDefinition {
+  name: string;
+  columns: string[];
+  unique?: boolean;
+  description?: string;
+}
+
+export interface ForeignKeyDefinition {
+  name: string;
+  column: string;
+  references: {
+    table: string;
+    column: string;
+  };
+  on_delete?: string;
+  on_update?: string;
+  description?: string;
+}
+
+export interface TableDefinition {
+  name: string;
+  cols: ColumnDefinition[];
+  description?: string;
+  indexes?: IndexDefinition[];
+  foreign_keys?: ForeignKeyDefinition[];
+}
+
+export interface DatabaseSchema {
+  version: string;
+  database_name: string;
+  description?: string;
+  type_mapping?: TypeMappingConfig['type_mapping'];
+  schemas: Record<string, {
+    description?: string;
+    cols: ColumnDefinition[];
+    indexes?: IndexDefinition[];
+    foreign_keys?: ForeignKeyDefinition[];
+  }>;
+}
+
+export interface ImportOptions {
+  tableName: string;
+  data: Record<string, any>[];
+  batchSize?: number;
+  onProgress?: (processed: number, total: number) => void;
+  onError?: (error: Error, rowIndex: number, rowData: Record<string, any>) => void;
+  skipErrors?: boolean;
+  validateData?: boolean;
+  updateOnConflict?: boolean;
+  conflictColumns?: string[];
+  includeAutoIncrementPK?: boolean;
+}
+
+export interface ImportResult {
+  totalRows: number;
+  successRows: number;
+  errorRows: number;
+  errors: Array<{
+    rowIndex: number;
+    error: string;
+    rowData: Record<string, any>;
+  }>;
+  executionTime: number;
 }
 
 // Global type declarations for different environments
@@ -49,6 +166,9 @@ declare global {
 
   // React Native Windows
   var Windows: any;
+
+  // Nodejs
+  var process:any;
   
   // React Native Platform
   var Platform: {

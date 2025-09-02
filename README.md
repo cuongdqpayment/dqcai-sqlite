@@ -2541,7 +2541,7 @@ interface SQLiteConfig {
 
 ```bash
 # Clone repository
-git clone https://github.com/dqcai/sqlite
+git clone https://github.com/cuongdqpayment/dqcai-sqlite
 cd sqlite
 
 # Install dependencies
