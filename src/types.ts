@@ -55,7 +55,7 @@ export interface WhereClause {
 
 export interface OrderByClause {
   name: string;
-  direction?: 'ASC' | 'DESC';
+  direction?: "ASC" | "DESC";
 }
 
 export interface LimitOffset {
@@ -72,7 +72,7 @@ export interface QueryTable {
 }
 
 export interface JoinClause {
-  type: 'INNER' | 'LEFT' | 'RIGHT' | 'FULL';
+  type: "INNER" | "LEFT" | "RIGHT" | "FULL";
   table: string;
   on: string;
 }
@@ -84,6 +84,13 @@ export interface IndexDefinition {
   description?: string;
 }
 
+export type ForeignKeyAction =
+  | "CASCADE"
+  | "RESTRICT"
+  | "SET NULL"
+  | "NO ACTION"
+  | undefined;
+
 export interface ForeignKeyDefinition {
   name: string;
   column: string;
@@ -91,8 +98,8 @@ export interface ForeignKeyDefinition {
     table: string;
     column: string;
   };
-  on_delete?: string;
-  on_update?: string;
+  on_delete?: string | ForeignKeyAction;
+  on_update?: string | ForeignKeyAction;
   description?: string;
 }
 
@@ -108,13 +115,22 @@ export interface DatabaseSchema {
   version: string;
   database_name: string;
   description?: string;
-  type_mapping?: TypeMappingConfig['type_mapping'];
-  schemas: Record<string, {
-    description?: string;
-    cols: ColumnDefinition[];
-    indexes?: IndexDefinition[];
-    foreign_keys?: ForeignKeyDefinition[];
-  }>;
+  type_mapping?: TypeMappingConfig["type_mapping"];
+  schemas: Record<
+    string,
+    {
+      description?: string;
+      cols: ColumnDefinition[];
+      indexes?: IndexDefinition[];
+      foreign_keys?: ForeignKeyDefinition[];
+    }
+  >;
+}
+
+// Transaction types
+export interface TransactionOperation {
+  type: "insert" | "update" | "delete" | "select";
+  table: QueryTable;
 }
 
 export interface ImportOptions {
@@ -122,7 +138,11 @@ export interface ImportOptions {
   data: Record<string, any>[];
   batchSize?: number;
   onProgress?: (processed: number, total: number) => void;
-  onError?: (error: Error, rowIndex: number, rowData: Record<string, any>) => void;
+  onError?: (
+    error: Error,
+    rowIndex: number,
+    rowData: Record<string, any>
+  ) => void;
   skipErrors?: boolean;
   validateData?: boolean;
   updateOnConflict?: boolean;
@@ -142,39 +162,67 @@ export interface ImportResult {
   executionTime: number;
 }
 
+// Interface cho mapping column
+export interface ColumnMapping {
+  sourceColumn: string;
+  targetColumn: string;
+  transform?: (value: any) => any;
+}
+
+// Interface for database factory options
+export interface DbFactoryOptions {
+  config?: DatabaseSchema; // Option 1: Provide a config object directly
+  configAsset?: any; // Option 3: Provide a required JSON asset
+  dbDirectory?: string; // Optional: Directory to store the .db file
+  adapter?: SQLiteAdapter; // Optional: Specific adapter to use
+}
+
 // Global type declarations for different environments
 declare global {
   // Browser environment
   interface Window {
     SQL?: any;
     initSqlJs?: (config?: any) => Promise<any>;
-    openDatabase?: (name: string, version: string, displayName: string, estimatedSize: number) => any;
+    openDatabase?: (
+      name: string,
+      version: string,
+      displayName: string,
+      estimatedSize: number
+    ) => any;
   }
 
   // Deno environment
-  var Deno: {
-    env: any;
-    version?: { deno: string };
-    [key: string]: any;
-  } | undefined;
+  var Deno:
+    | {
+        env: any;
+        readTextFile?: (path: string) => Promise<string>;
+        writeTextFile?: (path: string, data: string) => Promise<void>;
+        version?: { deno: string };
+        [key: string]: any;
+      }
+    | undefined;
 
   // Bun environment
-  var Bun: {
-    version: string;
-    [key: string]: any;
-  } | undefined;
+  var Bun:
+    | {
+        version: string;
+        [key: string]: any;
+      }
+    | undefined;
 
   // React Native Windows
   var Windows: any;
 
   // Nodejs
-  var process:any;
-  
+  var process: any;
+
   // React Native Platform
-  var Platform: {
-    OS: string;
-    Version?: string;
-  } | undefined;
+  var Platform:
+    | {
+        OS: string;
+        Version?: string;
+      }
+    | undefined;
 
   // Navigator (React Native detection)
   // var navigator: {

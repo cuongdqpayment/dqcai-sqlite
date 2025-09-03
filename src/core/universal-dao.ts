@@ -1,12 +1,40 @@
 // src/core/universal-dao.ts
-import { ColumnDefinition, DatabaseSchema, ImportOptions, ImportResult, IndexDefinition, QueryTable, SQLiteAdapter, SQLiteConnection, SQLiteResult, SQLiteRow, TableDefinition, TypeMappingConfig, WhereClause } from '../types';
+import {
+  ColumnDefinition,
+  DatabaseSchema,
+  ImportOptions,
+  ImportResult,
+  IndexDefinition,
+  QueryTable,
+  SQLiteAdapter,
+  SQLiteConnection,
+  SQLiteResult,
+  SQLiteRow,
+  TableDefinition,
+  TypeMappingConfig,
+  WhereClause,
+  ColumnMapping
+} from "../types";
+
 export class UniversalDAO {
   private connection: SQLiteConnection | null = null;
   private isConnected: boolean = false;
   private inTransaction: boolean = false;
-  private typeMappingConfig: TypeMappingConfig['type_mapping'] | null = null;
+  private typeMappingConfig: TypeMappingConfig["type_mapping"] | null = null;
+  private createIfNotExists: boolean = false;
+  private forceRecreate: boolean = false;
 
-  constructor(private adapter: SQLiteAdapter, private dbPath: string) {}
+  constructor(
+    private adapter: SQLiteAdapter,
+    private dbPath: string,
+    private options?: {
+      createIfNotExists?: boolean; // Mặc định false - không tạo mới nếu đã tồn tại
+      forceRecreate?: boolean;  // Mặc định false - ép tạo lại = true
+    }
+  ) {
+    this.createIfNotExists = options?.createIfNotExists ?? false;
+    this.forceRecreate = options?.forceRecreate ?? false;
+  }
 
   async connect(): Promise<void> {
     if (this.isConnected) {
@@ -25,8 +53,12 @@ export class UniversalDAO {
     }
   }
 
+  async close(): Promise<void> {
+    await this.disconnect();
+  }
+
   // Type mapping utilities
-  setTypeMappingConfig(config: TypeMappingConfig['type_mapping']): void {
+  setTypeMappingConfig(config: TypeMappingConfig["type_mapping"]): void {
     this.typeMappingConfig = config;
   }
 
@@ -36,59 +68,110 @@ export class UniversalDAO {
     }
 
     const sqliteMapping = this.typeMappingConfig.sqlite;
-    return sqliteMapping[genericType.toLowerCase()] || 'TEXT';
+    return sqliteMapping[genericType.toLowerCase()] || "TEXT";
   }
 
   private getDefaultSQLiteType(genericType: string): string {
     const defaultMapping: Record<string, string> = {
-      string: 'TEXT', varchar: 'TEXT', char: 'TEXT', email: 'TEXT', url: 'TEXT', uuid: 'TEXT',
-      integer: 'INTEGER', bigint: 'INTEGER', smallint: 'INTEGER', tinyint: 'INTEGER',
-      decimal: 'REAL', numeric: 'REAL', float: 'REAL', double: 'REAL',
-      boolean: 'INTEGER', timestamp: 'TEXT', datetime: 'TEXT', date: 'TEXT', time: 'TEXT',
-      json: 'TEXT', array: 'TEXT', blob: 'BLOB', binary: 'BLOB'
+      string: "TEXT",
+      varchar: "TEXT",
+      char: "TEXT",
+      email: "TEXT",
+      url: "TEXT",
+      uuid: "TEXT",
+      integer: "INTEGER",
+      bigint: "INTEGER",
+      smallint: "INTEGER",
+      tinyint: "INTEGER",
+      decimal: "REAL",
+      numeric: "REAL",
+      float: "REAL",
+      double: "REAL",
+      boolean: "INTEGER",
+      timestamp: "TEXT",
+      datetime: "TEXT",
+      date: "TEXT",
+      time: "TEXT",
+      json: "TEXT",
+      array: "TEXT",
+      blob: "BLOB",
+      binary: "BLOB",
     };
-    return defaultMapping[genericType.toLowerCase()] || 'TEXT';
+    return defaultMapping[genericType.toLowerCase()] || "TEXT";
   }
 
   private processColumnDefinition(col: ColumnDefinition): ColumnDefinition {
     const processedCol: ColumnDefinition = { ...col };
     processedCol.type = this.convertToSQLiteType(col.type);
-    
+
     const options: string[] = [];
     if (col.constraints) {
-      const constraints = col.constraints.toUpperCase().split(' ');
-      if (constraints.includes('PRIMARY')) {
-        options.push('PRIMARY KEY');
+      const constraints = col.constraints.toUpperCase().split(" ");
+      if (constraints.includes("PRIMARY")) {
+        options.push("PRIMARY KEY");
         processedCol.primary_key = true;
       }
-      if (constraints.includes('AUTO_INCREMENT') || constraints.includes('AUTOINCREMENT')) {
-        if (processedCol.primary_key) options.push('AUTOINCREMENT');
+      if (
+        constraints.includes("AUTO_INCREMENT") ||
+        constraints.includes("AUTOINCREMENT")
+      ) {
+        if (processedCol.primary_key) options.push("AUTOINCREMENT");
         processedCol.auto_increment = true;
       }
-      if (constraints.includes('NOT') && constraints.includes('NULL')) {
-        options.push('NOT NULL');
+      if (constraints.includes("NOT") && constraints.includes("NULL")) {
+        options.push("NOT NULL");
         processedCol.nullable = false;
       }
-      if (constraints.includes('UNIQUE')) {
-        if (!processedCol.primary_key) options.push('UNIQUE');
+      if (constraints.includes("UNIQUE")) {
+        if (!processedCol.primary_key) options.push("UNIQUE");
         processedCol.unique = true;
       }
+      // Handle DEFAULT values
+      const defaultIndex = constraints.indexOf("DEFAULT");
+      if (defaultIndex !== -1 && constraints.length > defaultIndex + 1) {
+        const defaultValue = constraints[defaultIndex + 1];
+        options.push(`DEFAULT ${defaultValue}`);
+        processedCol.default = defaultValue;
+      }
     }
-    
-    processedCol.option_key = options.join(' ').trim();
+
+    processedCol.option_key = options.join(" ").trim();
     return processedCol;
   }
 
-  // Schema initialization
+  // Schema initialization with enhanced options
   async initializeFromSchema(schema: DatabaseSchema): Promise<void> {
     this.ensureConnected();
+
+    // Check if schema already exists
+    let hasExistingSchema = false;
+    try {
+      const result = await this.execute(
+        "SELECT version FROM _schema_info ORDER BY applied_at DESC LIMIT 1"
+      );
+      hasExistingSchema = result.rows.length > 0;
+    } catch (error) {
+      hasExistingSchema = false;
+    }
+
+    // Handle existing schema based on options
+    if (hasExistingSchema && !this.createIfNotExists && !this.forceRecreate) {
+      if (schema.type_mapping) {
+        this.setTypeMappingConfig(schema.type_mapping);
+      }
+      return;
+    }
+
+    if (hasExistingSchema && this.forceRecreate) {
+      await this.dropAllTables();
+    }
 
     if (schema.type_mapping) {
       this.setTypeMappingConfig(schema.type_mapping);
     }
 
     try {
-      await this.execute('PRAGMA foreign_keys = ON');
+      await this.execute("PRAGMA foreign_keys = ON");
     } catch {}
 
     await this.beginTransaction();
@@ -97,7 +180,9 @@ export class UniversalDAO {
       for (const [tableName, tableConfig] of Object.entries(schema.schemas)) {
         const tableDefinition: TableDefinition = {
           name: tableName,
-          cols: tableConfig.cols.map(col => this.processColumnDefinition(col)),
+          cols: tableConfig.cols.map((col) =>
+            this.processColumnDefinition(col)
+          ),
           description: tableConfig.description,
           indexes: tableConfig.indexes,
           foreign_keys: tableConfig.foreign_keys,
@@ -119,11 +204,31 @@ export class UniversalDAO {
     }
   }
 
-  private async createTableWithForeignKeys(table: TableDefinition): Promise<void> {
-    const columnDefs = table.cols.map(col =>
-      `${col.name} ${col.type} ${col.option_key || ''}`.trim()
+  private async dropAllTables(): Promise<void> {
+    const tables = await this.execute(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
     );
-    
+
+    await this.beginTransaction();
+
+    try {
+      for (const table of tables.rows) {
+        await this.execute(`DROP TABLE IF EXISTS ${table.name}`);
+      }
+      await this.commitTransaction();
+    } catch (error) {
+      await this.rollbackTransaction();
+      throw error;
+    }
+  }
+
+  private async createTableWithForeignKeys(
+    table: TableDefinition
+  ): Promise<void> {
+    const columnDefs = table.cols.map((col) =>
+      `${col.name} ${col.type} ${col.option_key || ""}`.trim()
+    );
+
     const foreignKeyDefs: string[] = [];
     if (table.foreign_keys) {
       for (const fk of table.foreign_keys) {
@@ -133,17 +238,24 @@ export class UniversalDAO {
         foreignKeyDefs.push(fkSql);
       }
     }
-    
+
     const allDefs = [...columnDefs, ...foreignKeyDefs];
-    const sql = `CREATE TABLE IF NOT EXISTS ${table.name} (${allDefs.join(', ')})`;
+    const sql = `CREATE TABLE IF NOT EXISTS ${table.name} (${allDefs.join(
+      ", "
+    )})`;
     await this.execute(sql);
   }
 
-  private async createIndexesForTable(tableName: string, indexes: IndexDefinition[]): Promise<void> {
+  private async createIndexesForTable(
+    tableName: string,
+    indexes: IndexDefinition[]
+  ): Promise<void> {
     for (const index of indexes) {
-      const columns = index.columns.join(', ');
+      const columns = index.columns.join(", ");
       const isUnique = index.unique || false;
-      const sql = `CREATE ${isUnique ? 'UNIQUE' : ''} INDEX IF NOT EXISTS ${index.name} ON ${tableName} (${columns})`;
+      const sql = `CREATE ${isUnique ? "UNIQUE" : ""} INDEX IF NOT EXISTS ${
+        index.name
+      } ON ${tableName} (${columns})`;
       await this.execute(sql);
     }
   }
@@ -151,35 +263,37 @@ export class UniversalDAO {
   // Transaction management
   async beginTransaction(): Promise<void> {
     if (this.inTransaction) {
-      throw new Error('Transaction already in progress');
+      throw new Error("Transaction already in progress");
     }
-    await this.execute('BEGIN TRANSACTION');
+    await this.execute("BEGIN TRANSACTION");
     this.inTransaction = true;
   }
 
   async commitTransaction(): Promise<void> {
     if (!this.inTransaction) {
-      throw new Error('No transaction in progress');
+      throw new Error("No transaction in progress");
     }
-    await this.execute('COMMIT');
+    await this.execute("COMMIT");
     this.inTransaction = false;
   }
 
   async rollbackTransaction(): Promise<void> {
     if (!this.inTransaction) {
-      throw new Error('No transaction in progress');
+      throw new Error("No transaction in progress");
     }
-    await this.execute('ROLLBACK');
+    await this.execute("ROLLBACK");
     this.inTransaction = false;
   }
 
   // Schema management
   async getSchemaVersion(): Promise<string> {
     try {
-      const result = await this.getRst('SELECT version FROM _schema_info ORDER BY applied_at DESC LIMIT 1');
-      return result.version || '0';
+      const result = await this.getRst(
+        "SELECT version FROM _schema_info ORDER BY applied_at DESC LIMIT 1"
+      );
+      return result.version || "0";
     } catch {
-      return '0';
+      return "0";
     }
   }
 
@@ -188,67 +302,73 @@ export class UniversalDAO {
       version TEXT NOT NULL,
       applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
-    await this.execute(`INSERT INTO _schema_info (version) VALUES (?)`, [version]);
+    await this.execute(`INSERT INTO _schema_info (version) VALUES (?)`, [
+      version,
+    ]);
   }
 
   // CRUD Operations
   async insert(insertTable: QueryTable): Promise<SQLiteResult> {
-    const validCols = insertTable.cols.filter(col => col.value !== undefined && col.value !== null);
+    const validCols = insertTable.cols.filter(
+      (col) => col.value !== undefined && col.value !== null
+    );
     if (validCols.length === 0) {
-      throw new Error('No valid columns to insert');
+      throw new Error("No valid columns to insert");
     }
 
-    const columnNames = validCols.map(col => col.name).join(', ');
-    const placeholders = validCols.map(() => '?').join(', ');
-    const params = validCols.map(col =>
-      typeof col.value === 'object' ? JSON.stringify(col.value) : col.value
+    const columnNames = validCols.map((col) => col.name).join(", ");
+    const placeholders = validCols.map(() => "?").join(", ");
+    const params = validCols.map((col) =>
+      typeof col.value === "object" ? JSON.stringify(col.value) : col.value
     );
-    
+
     const sql = `INSERT INTO ${insertTable.name} (${columnNames}) VALUES (${placeholders})`;
     return await this.execute(sql, params);
   }
 
   async update(updateTable: QueryTable): Promise<SQLiteResult> {
-    const setCols = updateTable.cols.filter(col =>
-      col.value !== undefined && !updateTable.wheres?.some(w => w.name === col.name)
+    const setCols = updateTable.cols.filter(
+      (col) =>
+        col.value !== undefined &&
+        !updateTable.wheres?.some((w) => w.name === col.name)
     );
-    
+
     if (setCols.length === 0) {
-      throw new Error('No columns to update');
+      throw new Error("No columns to update");
     }
 
-    const setClause = setCols.map(col => `${col.name} = ?`).join(', ');
-    const params = setCols.map(col =>
-      typeof col.value === 'object' ? JSON.stringify(col.value) : col.value
+    const setClause = setCols.map((col) => `${col.name} = ?`).join(", ");
+    const params = setCols.map((col) =>
+      typeof col.value === "object" ? JSON.stringify(col.value) : col.value
     );
 
     let sql = `UPDATE ${updateTable.name} SET ${setClause}`;
     const whereClause = this.buildWhereClause(updateTable.wheres);
-    
+
     if (!whereClause.sql) {
-      throw new Error('WHERE clause is required for UPDATE operation');
+      throw new Error("WHERE clause is required for UPDATE operation");
     }
-    
+
     sql += whereClause.sql;
     params.push(...whereClause.params);
-    
+
     return await this.execute(sql, params);
   }
 
   async delete(deleteTable: QueryTable): Promise<SQLiteResult> {
     let sql = `DELETE FROM ${deleteTable.name}`;
     const whereClause = this.buildWhereClause(deleteTable.wheres);
-    
+
     if (!whereClause.sql) {
-      throw new Error('WHERE clause is required for DELETE operation');
+      throw new Error("WHERE clause is required for DELETE operation");
     }
-    
+
     sql += whereClause.sql;
     return await this.execute(sql, whereClause.params);
   }
 
   async select(selectTable: QueryTable): Promise<SQLiteRow> {
-    const { sql, params } = this.buildSelectQuery(selectTable, ' LIMIT 1');
+    const { sql, params } = this.buildSelectQuery(selectTable, " LIMIT 1");
     const result = await this.execute(sql, params);
     return result.rows[0] || {};
   }
@@ -260,62 +380,75 @@ export class UniversalDAO {
   }
 
   // Utility methods
-  private buildSelectQuery(selectTable: QueryTable, suffix: string = ''): { sql: string; params: any[] } {
-    const columns = selectTable.cols.length > 0
-      ? selectTable.cols.map(col => col.name).join(', ')
-      : '*';
-    
+  private buildSelectQuery(
+    selectTable: QueryTable,
+    suffix: string = ""
+  ): { sql: string; params: any[] } {
+    const columns =
+      selectTable.cols.length > 0
+        ? selectTable.cols.map((col) => col.name).join(", ")
+        : "*";
+
     let sql = `SELECT ${columns} FROM ${selectTable.name}`;
     const whereClause = this.buildWhereClause(selectTable.wheres);
     sql += whereClause.sql;
-    
+
     if (selectTable.orderbys?.length) {
       const orderBy = selectTable.orderbys
-        .map(o => `${o.name} ${o.direction || 'ASC'}`)
-        .join(', ');
+        .map((o) => `${o.name} ${o.direction || "ASC"}`)
+        .join(", ");
       sql += ` ORDER BY ${orderBy}`;
     }
-    
+
     if (selectTable.limitOffset) {
-      if (selectTable.limitOffset.limit) sql += ` LIMIT ${selectTable.limitOffset.limit}`;
-      if (selectTable.limitOffset.offset) sql += ` OFFSET ${selectTable.limitOffset.offset}`;
+      if (selectTable.limitOffset.limit)
+        sql += ` LIMIT ${selectTable.limitOffset.limit}`;
+      if (selectTable.limitOffset.offset)
+        sql += ` OFFSET ${selectTable.limitOffset.offset}`;
     }
-    
+
     sql += suffix;
     return { sql, params: whereClause.params };
   }
 
-  private buildWhereClause(wheres?: WhereClause[], clause: string = 'WHERE'): { sql: string; params: any[] } {
+  private buildWhereClause(
+    wheres?: WhereClause[],
+    clause: string = "WHERE"
+  ): { sql: string; params: any[] } {
     if (!wheres || wheres.length === 0) {
-      return { sql: '', params: [] };
+      return { sql: "", params: [] };
     }
-    
+
     const conditions: string[] = [];
     const params: any[] = [];
-    
+
     for (const where of wheres) {
-      const operator = where.operator || '=';
+      const operator = where.operator || "=";
       conditions.push(`${where.name} ${operator} ?`);
       params.push(where.value);
     }
-    
-    return { sql: ` ${clause} ${conditions.join(' AND ')}`, params };
+
+    return { sql: ` ${clause} ${conditions.join(" AND ")}`, params };
   }
 
-  convertJsonToQueryTable(tableName: string, json: Record<string, any>, idFields: string[] = ['id']): QueryTable {
+  convertJsonToQueryTable(
+    tableName: string,
+    json: Record<string, any>,
+    idFields: string[] = ["id"]
+  ): QueryTable {
     const queryTable: QueryTable = { name: tableName, cols: [], wheres: [] };
-    
+
     for (const [key, value] of Object.entries(json)) {
       queryTable.cols.push({ name: key, value });
       if (idFields.includes(key) && value !== undefined) {
         queryTable.wheres?.push({ name: key, value });
       }
     }
-    
+
     return queryTable;
   }
 
-  // Data Import functionality
+  // Enhanced Data Import functionality
   async importData(options: ImportOptions): Promise<ImportResult> {
     const startTime = Date.now();
     const result: ImportResult = {
@@ -327,7 +460,7 @@ export class UniversalDAO {
     };
 
     if (!this.isConnected) {
-      throw new Error('Database is not connected');
+      throw new Error("Database is not connected");
     }
 
     if (!options.data || options.data.length === 0) {
@@ -340,7 +473,9 @@ export class UniversalDAO {
       throw new Error(`Table '${options.tableName}' does not exist`);
     }
 
-    const columnMap = new Map(tableInfo.map(col => [col.name.toLowerCase(), col]));
+    const columnMap = new Map(
+      tableInfo.map((col) => [col.name.toLowerCase(), col])
+    );
     const batchSize = options.batchSize || 1000;
     let processedCount = 0;
     const skipAutoIncrementPK = !options.includeAutoIncrementPK;
@@ -357,11 +492,20 @@ export class UniversalDAO {
 
           try {
             const processedData = options.validateData
-              ? this.validateAndTransformRow(rowData, columnMap, options.tableName, skipAutoIncrementPK)
+              ? this.validateAndTransformRow(
+                  rowData,
+                  columnMap,
+                  options.tableName,
+                  skipAutoIncrementPK
+                )
               : this.transformRowData(rowData, columnMap, skipAutoIncrementPK);
 
             if (options.updateOnConflict && options.conflictColumns) {
-              await this.insertOrUpdate(options.tableName, processedData, options.conflictColumns);
+              await this.insertOrUpdate(
+                options.tableName,
+                processedData,
+                options.conflictColumns
+              );
             } else {
               await this.insertRow(options.tableName, processedData);
             }
@@ -410,6 +554,102 @@ export class UniversalDAO {
     return result;
   }
 
+  // Import with column mapping
+  async importDataWithMapping(
+    tableName: string,
+    data: Record<string, any>[],
+    columnMappings: ColumnMapping[],
+    options: Partial<ImportOptions> = {}
+  ): Promise<ImportResult> {
+    const transformedData = data.map((row) => {
+      const newRow: Record<string, any> = {};
+
+      columnMappings.forEach((mapping) => {
+        if (row.hasOwnProperty(mapping.sourceColumn)) {
+          let value = row[mapping.sourceColumn];
+
+          if (mapping.transform) {
+            value = mapping.transform(value);
+          }
+
+          newRow[mapping.targetColumn] = value;
+        }
+      });
+
+      return newRow;
+    });
+
+    return await this.importData({
+      tableName,
+      data: transformedData,
+      ...options,
+    });
+  }
+
+  // Import from CSV
+  async importFromCSV(
+    tableName: string,
+    csvData: string,
+    options: {
+      delimiter?: string;
+      hasHeader?: boolean;
+      columnMappings?: ColumnMapping[];
+    } & Partial<ImportOptions> = {}
+  ): Promise<ImportResult> {
+    const delimiter = options.delimiter || ",";
+    const hasHeader = options.hasHeader !== false;
+
+    const lines = csvData.split("\n").filter((line) => line.trim());
+    if (lines.length === 0) {
+      throw new Error("CSV data is empty");
+    }
+
+    let headers: string[] = [];
+    let dataStartIndex = 0;
+
+    if (hasHeader) {
+      headers = lines[0]
+        .split(delimiter)
+        .map((h) => h.trim().replace(/^["']|["']$/g, ""));
+      dataStartIndex = 1;
+    } else {
+      const firstRowCols = lines[0].split(delimiter).length;
+      headers = Array.from(
+        { length: firstRowCols },
+        (_, i) => `column_${i + 1}`
+      );
+    }
+
+    const data: Record<string, any>[] = [];
+    for (let i = dataStartIndex; i < lines.length; i++) {
+      const values = lines[i]
+        .split(delimiter)
+        .map((v) => v.trim().replace(/^["']|["']$/g, ""));
+      const row: Record<string, any> = {};
+
+      headers.forEach((header, index) => {
+        row[header] = values[index] || null;
+      });
+
+      data.push(row);
+    }
+
+    if (options.columnMappings) {
+      return await this.importDataWithMapping(
+        tableName,
+        data,
+        options.columnMappings,
+        options
+      );
+    } else {
+      return await this.importData({
+        tableName,
+        data,
+        ...options,
+      });
+    }
+  }
+
   private validateAndTransformRow(
     rowData: Record<string, any>,
     columnMap: Map<string, any>,
@@ -421,7 +661,8 @@ export class UniversalDAO {
     for (const [columnName, columnInfo] of columnMap.entries()) {
       const isRequired = columnInfo.notnull === 1 && !columnInfo.dflt_value;
       const isPrimaryKey = columnInfo.pk === 1;
-      const isAutoIncrementPK = isPrimaryKey && columnInfo.type.toLowerCase().includes('integer');
+      const isAutoIncrementPK =
+        isPrimaryKey && columnInfo.type.toLowerCase().includes("integer");
 
       if (skipAutoIncrementPK && isAutoIncrementPK) {
         continue;
@@ -430,11 +671,16 @@ export class UniversalDAO {
       const value = this.findValueForColumn(rowData, columnName);
 
       if (isRequired && (value === null || value === undefined)) {
-        throw new Error(`Required column '${columnName}' is missing or null in table '${tableName}'`);
+        throw new Error(
+          `Required column '${columnName}' is missing or null in table '${tableName}'`
+        );
       }
 
       if (value !== null && value !== undefined) {
-        processedRow[columnName] = this.convertValueToColumnType(value, columnInfo.type);
+        processedRow[columnName] = this.convertValueToColumnType(
+          value,
+          columnInfo.type
+        );
       }
     }
 
@@ -457,21 +703,28 @@ export class UniversalDAO {
       }
 
       const isPrimaryKey = columnInfo.pk === 1;
-      const isAutoIncrementPK = isPrimaryKey && columnInfo.type.toLowerCase().includes('integer');
+      const isAutoIncrementPK =
+        isPrimaryKey && columnInfo.type.toLowerCase().includes("integer");
 
       if (skipAutoIncrementPK && isAutoIncrementPK) {
         continue;
       }
 
       if (value !== null && value !== undefined) {
-        processedRow[key] = this.convertValueToColumnType(value, columnInfo.type);
+        processedRow[key] = this.convertValueToColumnType(
+          value,
+          columnInfo.type
+        );
       }
     }
 
     return processedRow;
   }
 
-  private findValueForColumn(rowData: Record<string, any>, columnName: string): any {
+  private findValueForColumn(
+    rowData: Record<string, any>,
+    columnName: string
+  ): any {
     if (rowData.hasOwnProperty(columnName)) {
       return rowData[columnName];
     }
@@ -494,50 +747,56 @@ export class UniversalDAO {
     const type = columnType.toLowerCase();
 
     try {
-      if (type.includes('integer') || type.includes('int')) {
-        if (typeof value === 'boolean') {
+      if (type.includes("integer") || type.includes("int")) {
+        if (typeof value === "boolean") {
           return value ? 1 : 0;
         }
         const num = parseInt(String(value));
         return isNaN(num) ? null : num;
       }
 
-      if (type.includes('real') || type.includes('float') || type.includes('decimal')) {
+      if (
+        type.includes("real") ||
+        type.includes("float") ||
+        type.includes("decimal")
+      ) {
         const num = parseFloat(String(value));
         return isNaN(num) ? null : num;
       }
 
-      if (type.includes('boolean')) {
-        if (typeof value === 'boolean') {
+      if (type.includes("boolean")) {
+        if (typeof value === "boolean") {
           return value ? 1 : 0;
         }
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
           const lower = value.toLowerCase();
-          return lower === 'true' || lower === '1' || lower === 'yes' ? 1 : 0;
+          return lower === "true" || lower === "1" || lower === "yes" ? 1 : 0;
         }
         return value ? 1 : 0;
       }
 
-      if (type.includes('json')) {
-        if (typeof value === 'object') {
+      if (type.includes("json")) {
+        if (typeof value === "object") {
           return JSON.stringify(value);
         }
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
           try {
             JSON.parse(value);
             return value;
           } catch {
-            throw new Error(`Invalid JSON format for column type '${columnType}'`);
+            throw new Error(
+              `Invalid JSON format for column type '${columnType}'`
+            );
           }
         }
         return JSON.stringify(value);
       }
 
-      if (type.includes('timestamp') || type.includes('datetime')) {
+      if (type.includes("timestamp") || type.includes("datetime")) {
         if (value instanceof Date) {
           return value.toISOString();
         }
-        if (typeof value === 'string' || typeof value === 'number') {
+        if (typeof value === "string" || typeof value === "number") {
           const date = new Date(value);
           return isNaN(date.getTime()) ? value : date.toISOString();
         }
@@ -546,16 +805,23 @@ export class UniversalDAO {
 
       return String(value);
     } catch (error) {
-      throw new Error(`Cannot convert value '${value}' to column type '${columnType}'`);
+      throw new Error(
+        `Cannot convert value '${value}' to column type '${columnType}'`
+      );
     }
   }
 
-  private async insertRow(tableName: string, data: Record<string, any>): Promise<void> {
+  private async insertRow(
+    tableName: string,
+    data: Record<string, any>
+  ): Promise<void> {
     const columns = Object.keys(data);
     const values = Object.values(data);
-    const placeholders = columns.map(() => '?').join(', ');
+    const placeholders = columns.map(() => "?").join(", ");
 
-    const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+    const sql = `INSERT INTO ${tableName} (${columns.join(
+      ", "
+    )}) VALUES (${placeholders})`;
     await this.execute(sql, values);
   }
 
@@ -581,18 +847,20 @@ export class UniversalDAO {
     conflictColumns: string[]
   ): Promise<void> {
     const allColumns = Object.keys(data);
-    const updateColumns = allColumns.filter(col => !conflictColumns.includes(col));
+    const updateColumns = allColumns.filter(
+      (col) => !conflictColumns.includes(col)
+    );
     const whereColumns = conflictColumns;
 
     if (updateColumns.length === 0) {
       return;
     }
 
-    const setClause = updateColumns.map(col => `${col} = ?`).join(', ');
-    const whereClause = whereColumns.map(col => `${col} = ?`).join(' AND ');
+    const setClause = updateColumns.map((col) => `${col} = ?`).join(", ");
+    const whereClause = whereColumns.map((col) => `${col} = ?`).join(" AND ");
 
-    const updateValues = updateColumns.map(col => data[col]);
-    const whereValues = whereColumns.map(col => data[col]);
+    const updateValues = updateColumns.map((col) => data[col]);
+    const whereValues = whereColumns.map((col) => data[col]);
     const allValues = [...updateValues, ...whereValues];
 
     const sql = `UPDATE ${tableName} SET ${setClause} WHERE ${whereClause}`;
@@ -601,22 +869,24 @@ export class UniversalDAO {
 
   private isConflictError(error: any): boolean {
     return (
-      error.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-      error.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
-      (error.message && error.message.includes('UNIQUE constraint failed'))
+      error.code === "SQLITE_CONSTRAINT_UNIQUE" ||
+      error.code === "SQLITE_CONSTRAINT_PRIMARYKEY" ||
+      (error.message && error.message.includes("UNIQUE constraint failed"))
     );
   }
 
   // Database info methods
   async getDatabaseInfo(): Promise<any> {
-    const tables = await this.execute("SELECT name FROM sqlite_master WHERE type='table'");
+    const tables = await this.execute(
+      "SELECT name FROM sqlite_master WHERE type='table'"
+    );
     const version = await this.getSchemaVersion();
-    
+
     return {
       name: this.dbPath,
-      tables: tables.rows.map(t => t.name),
+      tables: tables.rows.map((t) => t.name),
       isConnected: this.isConnected,
-      version
+      version,
     };
   }
 
@@ -630,10 +900,14 @@ export class UniversalDAO {
     await this.execute(sql);
   }
 
-  // Core execution methods
-  private ensureConnected(): void {
-    if (!this.isConnected || !this.connection) {
-      throw new Error('Database is not connected');
+  // Connection check method
+  isConnectionOpen(): boolean {
+    return this.isConnected && !!this.connection;
+  }
+
+  async ensureConnected(): Promise<void> {
+    if (!this.isConnectionOpen()) {
+      await this.connect();
     }
   }
 
