@@ -1,664 +1,525 @@
-# @dqcai/sqlite - Universal SQLite DAO Library
+# @dqcai/sqlite - A Universal SQLite Library (@dqcai/sqlite v2.0.0)
 
 ![Universal SQLite](https://img.shields.io/badge/SQLite-Universal-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
 ![Cross Platform](https://img.shields.io/badge/Platform-Universal-green)
 
-A universal SQLite Data Access Object (DAO) library that works across multiple JavaScript environments including Node.js, React Native, Browser, Deno, and Bun. This library provides a unified interface for SQLite operations with type-safe schema management, migrations, and advanced query capabilities.
+UniversalSQLite là một thư viện SQLite toàn diện, hỗ trợ đa nền tảng, được thiết kế để hoạt động mượt mà trên các môi trường như Browser, Node.js, Deno, Bun và React Native. Thư viện cung cấp giao diện thống nhất để quản lý cơ sở dữ liệu SQLite, bao gồm tạo schema, CRUD, query nâng cao, migration, import/export dữ liệu, và quản lý transaction. Nó sử dụng mô hình DAO (Data Access Object) để tách biệt logic truy cập dữ liệu, hỗ trợ role-based access control, và tích hợp dễ dàng với các framework.
 
 ## Features
 
-- **Universal Compatibility**: Works in Node.js, React Native, Browser, Deno, and Bun
-- **Type-Safe Schema Management**: Define and validate database schemas with TypeScript
-- **Advanced Query Builder**: Fluent interface for building complex SQL queries
-- **Migration System**: Version-controlled database schema changes
-- **CSV Import/Export**: Bulk data operations with validation
-- **Transaction Support**: ACID-compliant transaction management
-- **Connection Pooling**: Efficient database connection management
-- **Service Layer**: High-level abstraction for common CRUD operations
+- **Cross-Platform Support**: Hoạt động trên Browser, Node.js, Deno, Bun, React Native (iOS/Android/Windows).
+- **Schema-Based Management**: Tạo và quản lý database từ JSON schema.
+- **DAO Pattern**: UniversalDAO để thực hiện CRUD, query, transaction.
+- **Query Builder**: Xây dựng query phức tạp với join, where, group by, having, union, CTE.
+- **Migration System**: Quản lý migration với up/down scripts.
+- **Data Import/Export**: Hỗ trợ import từ CSV/JSON với mapping, validation, và export to CSV.
+- **Role-Based Access**: Quản lý kết nối dựa trên role người dùng.
+- **Transaction Management**: Hỗ trợ transaction đơn và cross-schema.
+- **Adapters**: Tự động detect môi trường, hỗ trợ register adapter tùy chỉnh.
+- **Type-Safe**: Đầy đủ types TypeScript cho schema, query, và operations.
+- **Utilities**: CSVImporter, MigrationManager, BaseService cho service layer.
 
 ## Installation
 
+Cài đặt qua npm hoặc yarn:
+
 ```bash
-# npm
-npm install @dqcai/sqlite
-
-# yarn
-yarn add @dqcai/sqlite
-
-# pnpm
-pnpm add @dqcai/sqlite
+npm install @dqcai/sqlite@2.0.0
+# hoặc
+yarn add @dqcai/sqlite@2.0.0
 ```
 
-### Environment-Specific Dependencies
-
-**Node.js:**
-```bash
-npm install sqlite3
-# or
-npm install better-sqlite3
-```
-
-**React Native:**
-```bash
-npm install react-native-sqlite-2
-# or
-npm install @react-native-async-storage/async-storage
-```
+Đối với React Native, đảm bảo cài đặt các dependencies cần thiết cho adapter (nếu sử dụng adapter cụ thể như react-native-sqlite-storage).
 
 ## Quick Start
 
-### Basic Usage
-
-```typescript
-import UniversalSQLite, { DatabaseSchema, UniversalDAO } from '@dqcai/sqlite';
-
-// Initialize the universal SQLite instance
-const db = new UniversalSQLite();
-
-// Connect to database
-await db.connect('path/to/database.db');
-
-// Execute raw SQL
-const result = await db.execute('SELECT * FROM users WHERE id = ?', [1]);
-
-// Use the DAO directly
-const dao = db.getDAO();
-const users = await dao.getRsts('SELECT * FROM users');
-
-// Disconnect
-await db.disconnect();
-```
-
-### Schema-Driven Development
+### Bước 1: Định nghĩa Schema
+Schema là một object JSON mô tả cấu trúc database.
 
 ```typescript
 import { DatabaseSchema } from '@dqcai/sqlite';
 
-// Define your database schema
-const schema: DatabaseSchema = {
-  version: "1.0.0",
-  database_name: "myapp_db",
-  description: "Main application database",
-  type_mapping: {
-    sqlite: {
-      string: 'TEXT',
-      integer: 'INTEGER',
-      boolean: 'INTEGER',
-      timestamp: 'TEXT',
-      json: 'TEXT'
-    }
-  },
+const exampleSchema: DatabaseSchema = {
+  version: '1.0.0',
+  database_name: 'example_db',
+  description: 'Example database',
   schemas: {
     users: {
-      description: "User accounts table",
+      description: 'Users table',
       cols: [
-        {
-          name: 'id',
-          type: 'integer',
-          primary_key: true,
-          auto_increment: true,
-          description: 'Primary key'
-        },
-        {
-          name: 'username',
-          type: 'string',
-          nullable: false,
-          unique: true,
-          description: 'Unique username'
-        },
-        {
-          name: 'email',
-          type: 'string',
-          nullable: false,
-          unique: true
-        },
-        {
-          name: 'created_at',
-          type: 'timestamp',
-          default: 'CURRENT_TIMESTAMP'
-        },
-        {
-          name: 'profile_data',
-          type: 'json',
-          nullable: true
-        }
+        { name: 'id', type: 'integer', primary_key: true, auto_increment: true },
+        { name: 'name', type: 'string', nullable: false },
+        { name: 'email', type: 'string', unique: true },
       ],
-      indexes: [
+      indexes: [{ name: 'idx_email', columns: ['email'], unique: true }],
+      foreign_keys: [],
+    },
+  },
+};
+```
+
+```json
+// schema.json ví dụ kiểu json
+{
+  "version": "1.0.0",
+  "database_name": "example.db",
+  "description": "Schema for example application.",
+  "schemas": {
+    "users": {
+      "description": "User accounts table.",
+      "cols": [
         {
-          name: 'idx_username',
-          columns: ['username'],
-          unique: true
+          "name": "id",
+          "type": "integer",
+          "constraints": "PRIMARY KEY AUTOINCREMENT"
         },
         {
-          name: 'idx_email',
-          columns: ['email']
+          "name": "name",
+          "type": "text",
+          "constraints": "NOT NULL"
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "constraints": "UNIQUE NOT NULL"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp",
+          "constraints": "DEFAULT CURRENT_TIMESTAMP"
         }
       ]
     },
-    posts: {
-      description: "User posts table",
-      cols: [
+    "posts": {
+      "description": "Posts created by users.",
+      "cols": [
         {
-          name: 'id',
-          type: 'integer',
-          primary_key: true,
-          auto_increment: true
+          "name": "id",
+          "type": "integer",
+          "constraints": "PRIMARY KEY AUTOINCREMENT"
         },
         {
-          name: 'user_id',
-          type: 'integer',
-          nullable: false
+          "name": "title",
+          "type": "text",
+          "constraints": "NOT NULL"
         },
         {
-          name: 'title',
-          type: 'string',
-          nullable: false
+          "name": "content",
+          "type": "text"
         },
         {
-          name: 'content',
-          type: 'string',
-          nullable: true
-        },
-        {
-          name: 'created_at',
-          type: 'timestamp',
-          default: 'CURRENT_TIMESTAMP'
+          "name": "user_id",
+          "type": "integer",
+          "constraints": "NOT NULL"
         }
       ],
-      foreign_keys: [
+      "foreign_keys": [
         {
-          name: 'fk_posts_user',
-          column: 'user_id',
-          references: {
-            table: 'users',
-            column: 'id'
+          "name": "fk_posts_user_id",
+          "column": "user_id",
+          "references": {
+            "table": "users",
+            "column": "id"
           },
-          on_delete: 'CASCADE',
-          on_update: 'CASCADE'
+          "on_delete": "CASCADE"
         }
       ]
     }
   }
-};
-
-// Initialize database with schema
-const db = new UniversalSQLite();
-await db.connect('myapp.db');
-await db.initializeSchema(schema);
+}
 ```
 
-## Environment-Specific Setup
-
-### Node.js Setup
-
-```typescript
-import UniversalSQLite, { DatabaseFactory } from '@dqcai/sqlite';
-import { NodeSQLiteAdapter } from '@dqcai/sqlite/adapters/node';
-
-// Register the Node.js adapter
-DatabaseFactory.registerAdapter(new NodeSQLiteAdapter());
-
-const db = new UniversalSQLite();
-await db.connect('./data/app.db');
-
-// Your application logic here
-const userService = db.createService('users');
-const newUser = await userService.create({
-  username: 'johndoe',
-  email: 'john@example.com',
-  profile_data: { firstName: 'John', lastName: 'Doe' }
-});
-```
-
-### React Native Setup
+### Bước 2: Khởi tạo và Sử dụng
+Sử dụng singleton UniversalSQLite.
 
 ```typescript
-import UniversalSQLite, { DatabaseFactory } from '@dqcai/sqlite';
-import { ReactNativeSQLiteAdapter } from '@dqcai/sqlite/adapters/react-native';
+import UniversalSQLite from '@dqcai/sqlite';
 
-// Register the React Native adapter
-DatabaseFactory.registerAdapter(new ReactNativeSQLiteAdapter());
+const sqlite = UniversalSQLite.getInstance();
 
-const db = new UniversalSQLite();
+async function init() {
+  await sqlite.initializeFromSchema(exampleSchema);
+  const dao = await sqlite.connect('example_db');
 
-// In React Native, database path is relative to Documents directory
-await db.connect('app.db');
-
-// React Native component example
-const UserList = () => {
-  const [users, setUsers] = useState([]);
-  
-  useEffect(() => {
-    const loadUsers = async () => {
-      const userService = db.createService('users');
-      const userList = await userService.findAll();
-      setUsers(userList);
-    };
-    
-    loadUsers();
-  }, []);
-  
-  return (
-    <FlatList
-      data={users}
-      keyExtractor={item => item.id.toString()}
-      renderItem={({ item }) => (
-        <Text>{item.username} - {item.email}</Text>
-      )}
-    />
-  );
-};
-```
-
-## Core Components
-
-### UniversalDAO
-
-The core data access object providing low-level database operations.
-
-```typescript
-import { UniversalDAO, QueryTable } from '@dqcai/sqlite';
-
-const dao = db.getDAO();
-
-// Insert data
-const insertTable: QueryTable = {
-  name: 'users',
-  cols: [
-    { name: 'username', value: 'alice' },
-    { name: 'email', value: 'alice@example.com' }
-  ]
-};
-const result = await dao.insert(insertTable);
-
-// Update data
-const updateTable: QueryTable = {
-  name: 'users',
-  cols: [
-    { name: 'email', value: 'alice.new@example.com' }
-  ],
-  wheres: [
-    { name: 'id', value: 1 }
-  ]
-};
-await dao.update(updateTable);
-
-// Select data
-const selectTable: QueryTable = {
-  name: 'users',
-  cols: [
-    { name: 'id' },
-    { name: 'username' },
-    { name: 'email' }
-  ],
-  wheres: [
-    { name: 'username', value: 'alice', operator: '=' }
-  ],
-  orderbys: [
-    { name: 'created_at', direction: 'DESC' }
-  ],
-  limitOffset: {
-    limit: 10,
-    offset: 0
-  }
-};
-const users = await dao.selectAll(selectTable);
-```
-
-### BaseService
-
-High-level service abstraction for common CRUD operations.
-
-```typescript
-// Create a custom service class
-class UserService extends BaseService<User> {
-  constructor(dao: UniversalDAO) {
-    super(dao, 'users');
-  }
-  
-  async findByUsername(username: string): Promise<User | null> {
-    const users = await this.findAll({
-      where: [{ name: 'username', value: username }]
-    });
-    return users[0] || null;
-  }
-  
-  async findActiveUsers(): Promise<User[]> {
-    return await this.findAll({
-      where: [{ name: 'status', value: 'active' }],
-      orderBy: [{ name: 'created_at', direction: 'DESC' }]
-    });
-  }
+  // CRUD example
+  await dao.insert({ name: 'users', cols: [{ name: 'name', value: 'John' }, { name: 'email', value: 'john@example.com' }] });
+  const users = await dao.selectAll({ name: 'users' });
+  console.log(users);
 }
 
-// Usage
-const userService = new UserService(db.getDAO());
-
-// Create user
-const newUser = await userService.create({
-  username: 'bob',
-  email: 'bob@example.com'
-});
-
-// Find user by ID
-const user = await userService.findById(1);
-
-// Update user
-const updatedUser = await userService.update(1, {
-  email: 'bob.updated@example.com'
-});
-
-// Delete user
-const deleted = await userService.delete(1);
-
-// Find all users with pagination
-const users = await userService.findAll({
-  limit: 10,
-  offset: 20,
-  orderBy: [{ name: 'created_at', direction: 'DESC' }]
-});
+init();
 ```
 
-### QueryBuilder
+## Adapters and Environment Setup
 
-Fluent interface for building complex SQL queries.
+UniversalSQLite tự động detect môi trường và chọn adapter phù hợp. Tuy nhiên, bạn có thể register adapter tùy chỉnh nếu cần.
+
+### Common Adapters
+- **Browser**: Sử dụng sql.js (cần import sql.js library).
+- **Node.js**: Sử dụng better-sqlite3 hoặc sqlite3 (cần cài đặt package tương ứng).
+- **React Native**: Sử dụng react-native-sqlite-storage (cần cài đặt package).
+- **Deno/Bun**: Sử dụng native SQLite support.
+
+### Register Adapter
+Khai báo adapter tùy chỉnh bằng cách extend BaseAdapter và register với DatabaseFactory.
+
+```typescript
+import { BaseAdapter, SQLiteAdapter } from '@dqcai/sqlite';
+import DatabaseFactory from '@dqcai/sqlite';
+
+class CustomNodeAdapter extends BaseAdapter implements SQLiteAdapter {
+  // Implement connect and isSupported
+  async connect(path: string) { /* ... */ }
+  isSupported() { return true; }
+}
+
+DatabaseFactory.registerAdapter(new CustomNodeAdapter());
+```
+
+## Usage Guide
+
+### 1. Khởi tạo Database
+Sử dụng DatabaseFactory để tạo hoặc mở database.
+
+- **Tạo từ Schema**:
+  ```typescript
+  const dao = await DatabaseFactory.createFromConfig(exampleSchema);
+  ```
+
+- **Mở Existing Database**:
+  ```typescript
+  const dao = await DatabaseFactory.openExisting('example_db.db');
+  ```
+
+- **Create DAO Directly**:
+  ```typescript
+  const dao = DatabaseFactory.createDAO('example_db.db', { createIfNotExists: true });
+  await dao.connect();
+  ```
+
+### 2. CRUD Operations với UniversalDAO
+UniversalDAO cung cấp các method CRUD cơ bản.
+
+```typescript
+// Insert
+await dao.insert({ name: 'users', cols: [{ name: 'name', value: 'Alice' }] });
+
+// Update
+await dao.update({ name: 'users', cols: [{ name: 'name', value: 'Bob' }], wheres: [{ name: 'id', value: 1 }] });
+
+// Delete
+await dao.delete({ name: 'users', wheres: [{ name: 'id', value: 1 }] });
+
+// Select
+const row = await dao.select({ name: 'users', wheres: [{ name: 'id', value: 1 }] });
+const allRows = await dao.selectAll({ name: 'users' });
+```
+
+### 3. Query Builder
+Xây dựng query phức tạp.
 
 ```typescript
 import { QueryBuilder } from '@dqcai/sqlite';
 
-const dao = db.getDAO();
+const qb = new QueryBuilder(dao).table('users')
+  .select('id', 'name')
+  .where('age', '>', 18)
+  .orderBy('name', 'ASC')
+  .limit(10);
 
-// Complex query example
-const query = QueryBuilder
-  .table('users')
-  .select(['users.id', 'users.username', 'profiles.display_name'])
-  .leftJoin('profiles', 'profiles.user_id = users.id')
-  .where('users.status = ?', 'active')
-  .whereNotNull('profiles.display_name')
-  .orderBy('users.created_at', 'DESC')
-  .limit(20);
-
-const { sql, params } = query.toSQL();
-const result = await dao.execute(sql, params);
-
-// Insert with QueryBuilder
-const insertQuery = QueryBuilder.insert('users', {
-  username: 'charlie',
-  email: 'charlie@example.com',
-  status: 'active'
-});
-
-await dao.execute(insertQuery.sql, insertQuery.params);
-
-// Update with QueryBuilder
-const updateQuery = QueryBuilder.update(
-  'users',
-  { email: 'charlie.new@example.com' },
-  'id = ?',
-  [1]
-);
-
-await dao.execute(updateQuery.sql, updateQuery.params);
-
-// Upsert (Insert or Update)
-const upsertQuery = QueryBuilder.upsert('users', {
-  username: 'dave',
-  email: 'dave@example.com'
-}, ['username']);
-
-await dao.execute(upsertQuery.sql, upsertQuery.params);
+const results = await qb.get();
 ```
 
-## Advanced Features
-
-### Migration System
+### 4. Migration
+Sử dụng MigrationManager.
 
 ```typescript
-import { MigrationManager, Migration } from '@dqcai/sqlite';
-
-const migrationManager = db.createMigrationManager();
-
-// Define migrations
-const migration1: Migration = {
-  version: '1.0.0',
-  description: 'Create initial tables',
-  up: async (dao) => {
-    await dao.execute(`
-      CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-  },
-  down: async (dao) => {
-    await dao.execute('DROP TABLE users');
-  }
-};
-
-const migration2: Migration = {
+const migrationManager = new MigrationManager(dao);
+migrationManager.addMigration({
   version: '1.1.0',
-  description: 'Add user profiles',
-  up: async (dao) => {
-    await dao.execute(`
-      CREATE TABLE profiles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        display_name TEXT,
-        bio TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-  },
-  down: async (dao) => {
-    await dao.execute('DROP TABLE profiles');
-  }
-};
-
-// Add migrations
-migrationManager.addMigration(migration1);
-migrationManager.addMigration(migration2);
-
-// Run migrations
+  description: 'Add column',
+  up: async (dao) => { await dao.execute('ALTER TABLE users ADD COLUMN age INTEGER'); },
+  down: async (dao) => { /* rollback */ },
+});
 await migrationManager.migrate();
-
-// Check migration status
-const status = await migrationManager.status();
-console.log(status);
-
-// Rollback to specific version
-await migrationManager.rollback('1.0.0');
 ```
 
-### CSV Import/Export
+### 5. Import/Export Data
+Sử dụng CSVImporter hoặc importData.
 
 ```typescript
-import { CSVImporter } from '@dqcai/sqlite';
+const importer = new CSVImporter(dao);
+await importer.importFromCSV('users', csvString, { hasHeader: true });
 
-const csvImporter = db.createCSVImporter();
-
-// Import CSV data
-const csvData = `
-username,email,age
-alice,alice@example.com,25
-bob,bob@example.com,30
-charlie,charlie@example.com,35
-`;
-
-const importResult = await csvImporter.importFromCSV('users', csvData, {
-  hasHeader: true,
-  delimiter: ',',
-  batchSize: 1000,
-  skipErrors: true,
-  validateData: true,
-  columnMappings: {
-    'username': 'username',
-    'email': 'email',
-    'age': 'age'
-  },
-  transform: {
-    'age': (value) => parseInt(value)
-  },
-  onProgress: (processed, total) => {
-    console.log(`Progress: ${processed}/${total}`);
-  },
-  onError: (error, rowIndex, rowData) => {
-    console.error(`Error at row ${rowIndex}:`, error.message);
-  }
-});
-
-console.log('Import Result:', importResult);
-
-// Bulk import using DAO
-const bulkData = [
-  { username: 'user1', email: 'user1@example.com' },
-  { username: 'user2', email: 'user2@example.com' },
-  { username: 'user3', email: 'user3@example.com' }
-];
-
-const dao = db.getDAO();
-const bulkResult = await dao.importData({
-  tableName: 'users',
-  data: bulkData,
-  batchSize: 500,
-  skipErrors: false,
-  validateData: true,
-  updateOnConflict: true,
-  conflictColumns: ['username']
-});
+// Hoặc import JSON
+await dao.importData({ tableName: 'users', data: [{ name: 'John' }] });
 ```
 
-### Transaction Management
-
+### 6. Transaction
 ```typescript
-const dao = db.getDAO();
-
+await dao.beginTransaction();
 try {
-  // Begin transaction
-  await dao.beginTransaction();
-  
-  // Perform multiple operations
-  const user = await dao.insert({
-    name: 'users',
-    cols: [
-      { name: 'username', value: 'transactional_user' },
-      { name: 'email', value: 'trans@example.com' }
-    ]
-  });
-  
-  await dao.insert({
-    name: 'profiles',
-    cols: [
-      { name: 'user_id', value: user.lastInsertRowId },
-      { name: 'display_name', value: 'Transactional User' }
-    ]
-  });
-  
-  // Commit transaction
+  // operations
   await dao.commitTransaction();
-  
-  console.log('Transaction completed successfully');
-} catch (error) {
-  // Rollback transaction on error
+} catch {
   await dao.rollbackTransaction();
-  console.error('Transaction failed:', error);
 }
 ```
 
-### Database Connection Management
+### 7. BaseService
+Tạo service layer.
 
 ```typescript
-import { DatabaseManager } from '@dqcai/sqlite';
+class UserService extends BaseService<{ id: number; name: string }> {
+  constructor() {
+    super('example_db', 'users');
+  }
+}
 
-const manager = new DatabaseManager();
-
-// Get connections for multiple databases
-const mainDb = await manager.getConnection('main.db');
-const cacheDb = await manager.getConnection('cache.db');
-const logDb = await manager.getConnection('logs.db');
-
-// Use different databases
-await mainDb.execute('INSERT INTO users ...');
-await cacheDb.execute('INSERT INTO cache_entries ...');
-await logDb.execute('INSERT INTO logs ...');
-
-// List all connections
-const connections = manager.listConnections();
-console.log('Active connections:', connections);
-
-// Close specific connection
-await manager.closeConnection('cache.db');
-
-// Close all connections
-await manager.closeAllConnections();
+const userService = new UserService();
+await userService.create({ name: 'John' });
 ```
+
+### 8. Role-Based Management
+Sử dụng DatabaseManager để quản lý role.
+
+```typescript
+DatabaseManager.registerRole({ roleName: 'admin', requiredDatabases: ['example_db'] });
+await DatabaseManager.setCurrentUserRoles(['admin']);
+const dao = DatabaseManager.get('example_db');
+```
+
+## Examples
+
+### Example for React Native
+
+1. Cài đặt dependencies:
+   ```bash
+   npm install react-native-sqlite-storage
+   ```
+
+2. Khai báo Adapter (nếu cần tùy chỉnh, nhưng thư viện tự detect):
+   ```typescript
+    import { enablePromise, openDatabase} from 'react-native-sqlite-storage';
+    import { BaseAdapter } from '@dqcai/sqlite';
+    enablePromise(true);
+    class ReactNativeAdapter extends BaseAdapter {
+        isSupported() {
+            return typeof Platform !== 'undefined' && Platform.OS !== 'web';
+        }
+
+        connect(path) {
+            return new Promise((resolve, reject) => {
+            const db = openDatabase(
+                { name: path, location: 'default' },
+                () => {
+                resolve({
+                    execute: (sql, params) => {
+                    return new Promise((execResolve, execReject) => {
+                        db.transaction(tx => {
+                        tx.executeSql(
+                            sql,
+                            params,
+                            (tx, results) => {
+                            const rowsAffected = results.rowsAffected;
+                            let rows = [];
+                            for (let i = 0; i < results.rows.length; i++) {
+                                rows.push(results.rows.item(i));
+                            }
+                            execResolve({ rows, rowsAffected, lastInsertRowId: results.insertId });
+                            },
+                            (tx, error) => {
+                            execReject(error);
+                            }
+                        );
+                        });
+                    });
+                    },
+                    close: () => {
+                    return new Promise((closeResolve, closeReject) => {
+                        db.close((err) => {
+                        if (err) return closeReject(err);
+                        closeResolve();
+                        });
+                    });
+                    }
+                });
+                },
+                (error) => reject(error)
+            );
+            });
+        }
+    }
+    export default ReactNativeAdapter;
+    
+   ```
+
+3. Tạo và Mở Database, CRUD:
+   ```typescript
+    import { DatabaseFactory } from '@dqcai/sqlite';
+    import ReactNativeAdapter from './adapters/react-native-adapter'; // Hoặc NodejsAdapter
+    import schema from './schema.json';
+
+    async function setupDatabase() {
+    // Đăng ký adapter để thư viện biết cách kết nối
+    DatabaseFactory.registerAdapter(new ReactNativeAdapter()); // Đăng ký adapter cho môi trường
+
+    // Tạo hoặc mở database. Nếu file chưa tồn tại, nó sẽ được tạo mới và init schema.
+    // Nếu đã tồn tại, nó sẽ được mở.
+    const dao = await DatabaseFactory.createOrOpen({ config: schema });
+
+    console.log(`Kết nối thành công tới database: ${dao.getDatabaseInfo().name}`);
+    return dao;
+    }
+
+    async function crudOperations(dao) {
+        // 1. CREATE (Insert)
+        console.log('Inserting a new user...');
+        const userToInsert = {
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+        };
+        const insertResult = await dao.insert({
+            name: 'users',
+            cols: Object.entries(userToInsert).map(([name, value]) => ({ name, value })),
+        });
+        const newUserId = insertResult.lastInsertRowId;
+        console.log(`User inserted with ID: ${newUserId}`);
+
+        // 2. READ (Select)
+        console.log('Selecting user by email...');
+        const selectedUser = await dao.select({
+            name: 'users',
+            cols: [], // Chọn tất cả các cột
+            wheres: [{ name: 'email', value: 'john.doe@example.com' }],
+        });
+        console.log('Selected user:', selectedUser);
+
+        // 3. UPDATE
+        console.log('Updating user name...');
+        await dao.update({
+            name: 'users',
+            cols: [{ name: 'name', value: 'John Smith' }],
+            wheres: [{ name: 'id', value: newUserId }],
+        });
+        const updatedUser = await dao.select({
+            name: 'users',
+            cols: ['id', 'name'],
+            wheres: [{ name: 'id', value: newUserId }],
+        });
+        console.log('Updated user:', updatedUser);
+
+        // 4. DELETE
+        console.log('Deleting the user...');
+        const deleteResult = await dao.delete({
+            name: 'users',
+            wheres: [{ name: 'id', value: newUserId }],
+        });
+        console.log(`Rows deleted: ${deleteResult.rowsAffected}`);
+
+        const checkUser = await dao.select({
+            name: 'users',
+            wheres: [{ name: 'id', value: newUserId }],
+        });
+        console.log('User exists after delete?', Object.keys(checkUser).length > 0);
+        }
+
+    // Chạy ví dụ
+    async function main() {
+    try {
+        const dao = await setupDatabase();
+        await crudOperations(dao);
+        await dao.close();
+        console.log('Đã đóng kết nối database.');
+    } catch (error) {
+        console.error('Đã xảy ra lỗi:', error);
+    }
+    }
+
+    main();
+   ```
+
+### Example for Node.js
+
+1. Cài đặt dependencies:
+   ```bash
+   npm install better-sqlite3
+   ```
+
+2. Khai báo Adapter (tự detect, nhưng có thể tùy chỉnh):
+   ```typescript
+   class NodeAdapter extends BaseAdapter {
+     async connect(path: string) {
+       const SQLite3 = require('better-sqlite3');
+       const db = new SQLite3(path);
+       return {
+         execute: (sql: string, params = []) => {
+           const stmt = db.prepare(sql);
+           const result = stmt.run(params);
+           return { rows: stmt.all(params), rowsAffected: result.changes };
+         },
+         close: () => db.close(),
+       };
+     }
+     isSupported() { return true; }
+   }
+
+   DatabaseFactory.registerAdapter(new NodeAdapter());
+   ```
+
+3. Tạo và Mở Database, CRUD:
+   ```typescript
+   import UniversalSQLite from '@dqcai/sqlite';
+
+   const sqlite = UniversalSQLite.getInstance();
+
+   async function nodeExample() {
+     await sqlite.initializeFromSchema(exampleSchema);
+     const dao = await sqlite.connect('example_db');
+
+     // CRUD
+     await dao.insert({ name: 'users', cols: [{ name: 'name', value: 'NodeUser' }, { name: 'email', value: 'node@example.com' }] });
+     const users = await dao.selectAll({ name: 'users' });
+     console.log('Users:', users);
+
+     // Query Builder
+     const qb = sqlite.query('users');
+     const results = await qb.select('*').where('name', 'LIKE', '%User%').get();
+
+     // Migration
+     const migrationManager = sqlite.createMigrationManager();
+     migrationManager.addMigration({
+       version: '1.0.1',
+       description: 'Add age',
+       up: async (dao) => await dao.execute('ALTER TABLE users ADD COLUMN age INTEGER'),
+       down: async (dao) => await dao.execute('ALTER TABLE users DROP COLUMN age'),
+     });
+     await migrationManager.migrate();
+
+     // Import from File
+     const importer = sqlite.createCSVImporter();
+     await importer.importFromFile('users', './data.csv', { hasHeader: true });
+
+     await sqlite.closeAll();
+   }
+
+   nodeExample();
+   ```
 
 ## API Reference
 
-### Core Classes
+- **UniversalSQLite**: Singleton chính, methods: initialize, connect, getDAO, query, execute, importData, etc.
+- **UniversalDAO**: Core DAO cho CRUD, execute, importData.
+- **QueryBuilder**: Xây dựng query với fluent API.
+- **MigrationManager**: Quản lý migration.
+- **CSVImporter**: Import/export CSV.
+- **BaseService**: Base cho service layer.
+- **DatabaseFactory**: Factory để tạo DAO.
+- **DatabaseManager**: Quản lý connections, roles.
 
-#### UniversalSQLite
-Main entry point for the library.
+Xem source code để biết chi tiết types và methods.
 
-- `connect(dbPath: string, options?)`: Connect to database
-- `disconnect()`: Close all connections
-- `getDAO()`: Get UniversalDAO instance
-- `createService<T>(tableName: string)`: Create BaseService instance
-- `execute(sql: string, params?)`: Execute raw SQL
-- `initializeSchema(schema: DatabaseSchema)`: Initialize database from schema
-
-#### UniversalDAO
-Core data access object.
-
-- `insert(table: QueryTable)`: Insert data
-- `update(table: QueryTable)`: Update data  
-- `delete(table: QueryTable)`: Delete data
-- `select(table: QueryTable)`: Select single record
-- `selectAll(table: QueryTable)`: Select multiple records
-- `execute(sql: string, params?)`: Execute raw SQL
-- `beginTransaction()`: Start transaction
-- `commitTransaction()`: Commit transaction
-- `rollbackTransaction()`: Rollback transaction
-
-#### BaseService<T>
-High-level service abstraction.
-
-- `create(data: Partial<T>)`: Create record
-- `update(id: any, data: Partial<T>)`: Update record
-- `delete(id: any)`: Delete record
-- `findById(id: any)`: Find by ID
-- `findAll(options?)`: Find all records
-- `count(where?)`: Count records
-- `exists(id: any)`: Check if record exists
-- `bulkInsert(items: Partial<T>[])`: Bulk insert
-
-### Type Definitions
-
-```typescript
-interface SQLiteResult {
-  rows: SQLiteRow[];
-  rowsAffected: number;
-  lastInsertRowId?: number;
-}
-
-interface QueryTable {
-  name: string;
-  cols: Column[];
-  wheres?: WhereClause[];
-  orderbys?: OrderByClause[];
-  limitOffset?: LimitOffset;
-}
-
-interface DatabaseSchema {
-  version: string;
-  database_name: string;
-  description?: string;
-  type_mapping?: TypeMappingConfig['type_mapping'];
-  schemas: Record<string, TableSchema>;
-}
-```
 
 ## Best Practices
 
