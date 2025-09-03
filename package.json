@@ -1,6 +1,6 @@
 {
   "name": "@dqcai/sqlite",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "Universal SQLite adapter for Node.js, Browser, Deno, Bun, and React Native with a unified API and query builder.",
   "main": "lib/index.js",
@@ -71,8 +71,7 @@
     "rollup-plugin-esbuild": "^6.2.1",
     "typescript": "^5.9.2"
   },
-  "peerDependencies": {
-  },
+  "peerDependencies": {},
   "overrides": {
     "glob": "^11.0.3",
     "rimraf": "^6.0.1"
