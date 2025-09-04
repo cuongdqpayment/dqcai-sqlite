@@ -60,6 +60,35 @@ export class DatabaseManager {
   private static eventListeners: Map<string, Array<(dao: UniversalDAO) => void>> = new Map();
 
   /**
+   * Get the maximum number of allowed database connections
+   */
+  public static getMaxConnections(): number {
+    return this.maxConnections;
+  }
+
+  /**
+   * Set the maximum number of allowed database connections
+   * @param maxConnections - The maximum number of connections (must be positive)
+   * @throws Error if maxConnections is not positive or if current connections exceed the new limit
+   */
+  public static setMaxConnections(maxConnections: number): void {
+    if (maxConnections <= 0) {
+      throw new Error('Maximum connections must be a positive number');
+    }
+
+    const currentConnectionCount = Object.keys(this.connections).length;
+    if (currentConnectionCount > maxConnections) {
+      throw new Error(
+        `Cannot set maximum connections to ${maxConnections}. ` +
+        `Current active connections (${currentConnectionCount}) exceed the new limit. ` +
+        `Please close some connections first.`
+      );
+    }
+
+    this.maxConnections = maxConnections;
+  }
+
+  /**
    * Set a schema manager for dynamic schema handling
    */
   public static setSchemaManager(manager: SchemaManager): void {
