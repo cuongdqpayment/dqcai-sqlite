@@ -1,6 +1,6 @@
 // src/core/database-manager.ts
 
-import { SQLiteAdapter, DatabaseSchema, ImportOptions, ImportResult, ColumnMapping } from "../types";
+import { DatabaseSchema, ImportOptions, ImportResult, ColumnMapping } from "../types";
 import { DatabaseFactory } from "./database-factory";
 import { UniversalDAO } from "./universal-dao";
 

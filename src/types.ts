@@ -31,12 +31,15 @@ export interface TypeMappingConfig {
 export interface ColumnDefinition {
   name: string;
   type: string;
+  precision?: number;
+  scale?: number;
   option_key?: string;
   description?: string;
   nullable?: boolean;
   default?: any;
   primary_key?: boolean;
   auto_increment?: boolean;
+  enum?: string[] | number[];
   unique?: boolean;
   constraints?: string;
   length?: number;
@@ -175,6 +178,22 @@ export interface DbFactoryOptions {
   configAsset?: any; // Option 3: Provide a required JSON asset
   dbDirectory?: string; // Optional: Directory to store the .db file
   adapter?: SQLiteAdapter; // Optional: Specific adapter to use
+}
+
+// Thêm kiểu kiểm tra sức khỏe của Database
+export interface ServiceStatus {
+  schemaName: string;
+  isOpened: boolean;
+  isInitialized: boolean;
+  hasDao: boolean;
+}
+
+export interface HealthCheckResult {
+  healthy: boolean;
+  schemaName: string;
+  recordCount?: number;
+  error?: string;
+  timestamp: string;
 }
 
 // Global type declarations for different environments

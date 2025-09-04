@@ -6,24 +6,11 @@ import {
   ImportResult,
   ColumnMapping,
   ImportOptions,
+  ServiceStatus,
+  HealthCheckResult,
 } from "../types";
 import { UniversalDAO } from "./universal-dao";
 import { DatabaseManager } from "./database-manager";
-
-export interface ServiceStatus {
-  schemaName: string;
-  isOpened: boolean;
-  isInitialized: boolean;
-  hasDao: boolean;
-}
-
-export interface HealthCheckResult {
-  healthy: boolean;
-  schemaName: string;
-  recordCount?: number;
-  error?: string;
-  timestamp: string;
-}
 
 export interface FindOptions {
   where?: WhereClause[];
@@ -130,20 +117,8 @@ export abstract class BaseService<T = any> {
       this._validateData(data);
       const queryTable = this.buildDataTable(data as Record<string, any>);
       const result = await this.dao!.insert(queryTable);
-
-      let createdRecord: T | null = null;
-      if (result.lastInsertRowId) {
-        createdRecord = await this.findById(result.lastInsertRowId);
-      } else if (data[this.primaryKeyFields[0] as keyof T]) {
-        createdRecord = await this.findById(
-          data[this.primaryKeyFields[0] as keyof T] as any
-        );
-      } else {
-        createdRecord = data as T;
-      }
-
-      this._emit("dataCreated", { operation: "create", data: createdRecord });
-      return createdRecord;
+      this._emit("dataCreated", { operation: "create", data: result });
+      return result as T;
     } catch (error) {
       this._handleError("CREATE_ERROR", error as Error);
       throw error;
