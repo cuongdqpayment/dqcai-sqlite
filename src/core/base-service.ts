@@ -107,18 +107,34 @@ export abstract class BaseService<T = any> {
   }
 
   /**
-   * Create a new record
+   * Create a new record - Safe version với comprehensive error handling
    */
   async create(data: Partial<T>): Promise<T | null> {
     await this._ensureInitialized();
     await this.ensureValidConnection();
-
     try {
       this._validateData(data);
       const queryTable = this.buildDataTable(data as Record<string, any>);
       const result = await this.dao!.insert(queryTable);
-      this._emit("dataCreated", { operation: "create", data: result });
-      return result as T;
+      if (result.rowsAffected === 0) {
+        throw new Error("Insert operation failed - no rows affected");
+      }
+      let createdRecord: T | null = null;
+      const primaryKeyValue = data[this.primaryKeyFields[0] as keyof T];
+      try {
+        if (primaryKeyValue !== undefined && primaryKeyValue !== null) {
+          createdRecord = await this.findById(primaryKeyValue as any);
+        } else if (result.lastInsertRowId) {
+          createdRecord = await this.findById(result.lastInsertRowId);
+        }
+      } catch (findError) {
+        console.warn(`Warning: Could not retrieve created record:`, findError);
+      }
+      if (!createdRecord) {
+        createdRecord = data as T;
+      }
+      this._emit("dataCreated", { operation: "create", data: createdRecord });
+      return createdRecord;
     } catch (error) {
       this._handleError("CREATE_ERROR", error as Error);
       throw error;
