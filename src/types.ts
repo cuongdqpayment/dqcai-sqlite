@@ -183,6 +183,7 @@ export interface DbFactoryOptions {
 // Thêm kiểu kiểm tra sức khỏe của Database
 export interface ServiceStatus {
   schemaName: string;
+  tableName:string;
   isOpened: boolean;
   isInitialized: boolean;
   hasDao: boolean;

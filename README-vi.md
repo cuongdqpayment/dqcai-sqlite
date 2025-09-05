@@ -4,51 +4,50 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
 ![Cross Platform](https://img.shields.io/badge/Platform-Universal-green)
 
-UniversalSQLite is a comprehensive, cross-platform SQLite library designed to work seamlessly across environments like Browser, Node.js, Deno, Bun, and React Native. The library provides a unified interface for managing SQLite databases, including schema creation, CRUD operations, advanced queries, migrations, data import/export, transaction management, and service lifecycle management. It uses the DAO (Data Access Object) pattern to separate data access logic, supports role-based access control, and integrates easily with various frameworks.
+UniversalSQLite là một thư viện SQLite toàn diện, hỗ trợ đa nền tảng, được thiết kế để hoạt động mượt mà trên các môi trường như Browser, Node.js, Deno, Bun và React Native. Thư viện cung cấp giao diện thống nhất để quản lý cơ sở dữ liệu SQLite, bao gồm tạo schema, CRUD, query nâng cao, migration, import/export dữ liệu, và quản lý transaction. Nó sử dụng mô hình DAO (Data Access Object) để tách biệt logic truy cập dữ liệu, hỗ trợ role-based access control, và tích hợp dễ dàng với các framework.
 
 ## Features
 
-- **Cross-Platform Support**: Works on Browser, Node.js, Deno, Bun, React Native (iOS/Android/Windows).
-- **Schema-Based Management**: Create and manage databases from JSON schemas.
-- **DAO Pattern**: UniversalDAO for CRUD operations, queries, and transactions.
-- **Query Builder**: Build complex queries with join, where, group by, having, union, CTE.
-- **Migration System**: Manage migrations with up/down scripts.
-- **Data Import/Export**: Support import from CSV/JSON with mapping, validation, and export to CSV.
-- **Role-Based Access**: Manage connections based on user roles.
-- **Transaction Management**: Support single and cross-schema transactions.
-- **Service Management**: Lifecycle management for service instances with ServiceManager.
-- **Adapters**: Auto-detect environment, support custom adapter registration.
-- **Type-Safe**: Full TypeScript types for schema, queries, and operations.
-- **Utilities**: CSVImporter, MigrationManager, BaseService for service layer.
-- **DatabaseManager**: Manage connections, schemas, and user roles.
-- **BaseService**: Base class for CRUD operations with built-in optimization.
+- **Cross-Platform Support**: Hoạt động trên Browser, Node.js, Deno, Bun, React Native (iOS/Android/Windows).
+- **Schema-Based Management**: Tạo và quản lý database từ JSON schema.
+- **DAO Pattern**: UniversalDAO để thực hiện CRUD, query, transaction.
+- **Query Builder**: Xây dựng query phức tạp với join, where, group by, having, union, CTE.
+- **Migration System**: Quản lý migration với up/down scripts.
+- **Data Import/Export**: Hỗ trợ import từ CSV/JSON với mapping, validation, và export to CSV.
+- **Role-Based Access**: Quản lý kết nối dựa trên role người dùng.
+- **Transaction Management**: Hỗ trợ transaction đơn và cross-schema.
+- **Adapters**: Tự động detect môi trường, hỗ trợ register adapter tùy chỉnh.
+- **Type-Safe**: Đầy đủ types TypeScript cho schema, query, và operations.
+- **Utilities**: CSVImporter, MigrationManager, BaseService cho service layer.
+- **DatabaseManager**: Quản lý kết nối, schema và vai trò người dùng
+- **BaseService**: Lớp cơ sở cho CRUD operations
 
 ## Installation
 
-Install via npm or yarn:
+Cài đặt qua npm hoặc yarn:
 
 ```bash
-npm install @dqcai/sqlite@2.1.0
-# or
-yarn add @dqcai/sqlite@2.1.0
+npm install @dqcai/sqlite@2.0.0
+# hoặc
+yarn add @dqcai/sqlite@2.0.0
 ```
 
-For React Native, ensure you install the necessary dependencies for the adapter (if using specific adapters like react-native-sqlite-storage).
+Đối với React Native, đảm bảo cài đặt các dependencies cần thiết cho adapter (nếu sử dụng adapter cụ thể như react-native-sqlite-storage).
 
-## Quick Start
+## Cài đặt
 
 ```bash
 npm install @dqcai/sqlite
 ```
 
-## 1. Database Schema Configuration
+## 1. Cấu hình Schema Database
 
-First, define the schema for your database:
+Trước tiên, định nghĩa schema cho cơ sở dữ liệu:
 
 ```typescript
 import { DatabaseSchema } from '@dqcai/sqlite';
 
-// Schema for users database
+// Schema cho database users
 const userSchema: DatabaseSchema = {
   version: "1.0.0",
   database_name: "users",
@@ -159,7 +158,7 @@ const userSchema: DatabaseSchema = {
   }
 };
 
-// Core schema for system
+// Schema core cho hệ thống
 const coreSchema: DatabaseSchema = {
   version: "1.0.0",
   database_name: "core",
@@ -188,211 +187,17 @@ const coreSchema: DatabaseSchema = {
 };
 ```
 
-## 2. Service Management with ServiceManager
+## 2. Setup cho React Native
 
-### Service Configuration and Registration
-
-The ServiceManager provides centralized lifecycle management for service instances:
-
-```typescript
-// services/ServiceRegistration.ts
-import { ServiceManager, ServiceConfig } from '@dqcai/sqlite';
-import { UserService, ProfileService } from './UserService';
-import { SettingsService } from './CoreService';
-
-export class ServiceRegistration {
-  private static serviceManager = ServiceManager.getInstance();
-
-  static registerAllServices(): void {
-    const serviceConfigs: ServiceConfig[] = [
-      // User services
-      {
-        schemaName: 'users',
-        tableName: 'users',
-        primaryKeyFields: ['id'],
-        serviceClass: UserService
-      },
-      {
-        schemaName: 'users',
-        tableName: 'profiles',
-        primaryKeyFields: ['id'],
-        serviceClass: ProfileService
-      },
-      // Core services
-      {
-        schemaName: 'core',
-        tableName: 'settings',
-        primaryKeyFields: ['key'],
-        serviceClass: SettingsService
-      }
-    ];
-
-    // Register all services at once
-    this.serviceManager.registerServices(serviceConfigs);
-    
-    console.log('All services registered successfully');
-  }
-
-  static async getService<T = BaseService>(
-    schemaName: string, 
-    tableName: string
-  ): Promise<T> {
-    const service = await this.serviceManager.getService(schemaName, tableName);
-    return service as T;
-  }
-
-  static async initializeService<T = BaseService>(
-    schemaName: string, 
-    tableName: string
-  ): Promise<T> {
-    const service = await this.serviceManager.initializeService(schemaName, tableName);
-    return service as T;
-  }
-
-  static async destroyService(schemaName: string, tableName: string): Promise<boolean> {
-    return await this.serviceManager.destroyService(schemaName, tableName);
-  }
-
-  static async getHealthReport() {
-    return await this.serviceManager.healthCheck();
-  }
-
-  static getServiceInfo() {
-    return this.serviceManager.getAllServiceInfo();
-  }
-}
-```
-
-### Advanced Service Management
-
-```typescript
-// services/ServiceMonitor.ts
-import { ServiceManager, ServiceManagerEvent } from '@dqcai/sqlite';
-
-export class ServiceMonitor {
-  private serviceManager = ServiceManager.getInstance();
-
-  constructor() {
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers(): void {
-    // Monitor service lifecycle events
-    this.serviceManager.on('SERVICE_CREATED', this.onServiceCreated);
-    this.serviceManager.on('SERVICE_DESTROYED', this.onServiceDestroyed);
-    this.serviceManager.on('SERVICE_ERROR', this.onServiceError);
-    this.serviceManager.on('HEALTH_CHECK_COMPLETED', this.onHealthCheckCompleted);
-  }
-
-  private onServiceCreated = (event: ServiceManagerEvent): void => {
-    console.log(`Service created: ${event.serviceKey}`, {
-      schema: event.schemaName,
-      table: event.tableName,
-      timestamp: event.timestamp
-    });
-  };
-
-  private onServiceDestroyed = (event: ServiceManagerEvent): void => {
-    console.log(`Service destroyed: ${event.serviceKey}`, {
-      schema: event.schemaName,
-      table: event.tableName,
-      timestamp: event.timestamp
-    });
-  };
-
-  private onServiceError = (event: ServiceManagerEvent): void => {
-    console.error(`Service error in ${event.serviceKey}:`, {
-      error: event.error?.message,
-      schema: event.schemaName,
-      table: event.tableName,
-      timestamp: event.timestamp
-    });
-  };
-
-  private onHealthCheckCompleted = (event: ServiceManagerEvent): void => {
-    const report = event.data;
-    console.log('Health check completed:', {
-      totalServices: report.totalServices,
-      healthyServices: report.healthyServices,
-      unhealthyServices: report.unhealthyServices,
-      overallHealth: report.overallHealth,
-      timestamp: event.timestamp
-    });
-
-    // Alert if unhealthy services found
-    if (!report.overallHealth) {
-      console.warn('Unhealthy services detected!', report.services.filter(s => !s.healthy));
-    }
-  };
-
-  // Periodic health monitoring
-  async startPeriodicHealthCheck(intervalMs: number = 60000): Promise<void> {
-    setInterval(async () => {
-      try {
-        await this.serviceManager.healthCheck();
-      } catch (error) {
-        console.error('Periodic health check failed:', error);
-      }
-    }, intervalMs);
-  }
-
-  // Get service statistics
-  getServiceStats() {
-    const infos = this.serviceManager.getAllServiceInfo();
-    const schemas = this.serviceManager.getSchemas();
-    
-    return {
-      totalServices: this.serviceManager.getServiceCount(),
-      registeredServices: this.serviceManager.getRegisteredCount(),
-      activeSchemas: schemas,
-      serviceBreakdown: schemas.map(schema => ({
-        schema,
-        serviceCount: infos.filter(info => info.schemaName === schema).length
-      })),
-      recentlyAccessed: infos
-        .filter(info => info.lastAccessed)
-        .sort((a, b) => 
-          new Date(b.lastAccessed!).getTime() - new Date(a.lastAccessed!).getTime()
-        )
-        .slice(0, 10)
-    };
-  }
-
-  // Cleanup unused services
-  async cleanupUnusedServices(schemaName?: string): Promise<void> {
-    if (schemaName) {
-      await this.serviceManager.destroyServicesBySchema(schemaName);
-      console.log(`Cleaned up services for schema: ${schemaName}`);
-    } else {
-      // Custom cleanup logic based on access time
-      const infos = this.serviceManager.getAllServiceInfo();
-      const cutoffTime = Date.now() - (30 * 60 * 1000); // 30 minutes ago
-      
-      for (const info of infos) {
-        if (info.lastAccessed) {
-          const lastAccess = new Date(info.lastAccessed).getTime();
-          if (lastAccess < cutoffTime) {
-            await this.serviceManager.destroyService(info.schemaName, info.tableName);
-            console.log(`Cleaned up unused service: ${info.key}`);
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-## 3. Setup for React Native
-
-### Install dependencies
+### Cài đặt dependencies
 
 ```bash
 npm install react-native-sqlite-2
-# Or
+# Hoặc
 npm install react-native-sqlite-storage
 ```
 
-### Create Adapter for React Native
+### Tạo Adapter cho React Native
 
 ```typescript
 // adapters/ReactNativeAdapter.ts
@@ -451,19 +256,18 @@ class ReactNativeConnection {
   }
 
   async close(): Promise<void> {
-    // React Native SQLite doesn't need manual close
+    // React Native SQLite không cần close thủ công
     return Promise.resolve();
   }
 }
 ```
 
-### Initialize DatabaseManager (React Native)
+### Khởi tạo DatabaseManager (React Native)
 
 ```typescript
 // services/DatabaseService.ts
 import { DatabaseManager, DatabaseFactory } from '@dqcai/sqlite';
 import { ReactNativeAdapter } from '../adapters/ReactNativeAdapter';
-import { ServiceRegistration } from './ServiceRegistration';
 
 export class DatabaseService {
   private static isInitialized = false;
@@ -471,16 +275,16 @@ export class DatabaseService {
   static async initialize() {
     if (this.isInitialized) return;
 
-    // Register adapter
+    // Đăng ký adapter
     DatabaseFactory.registerAdapter(new ReactNativeAdapter());
 
-    // Register schemas
+    // Đăng ký schemas
     DatabaseManager.registerSchemas({
       core: coreSchema,
       users: userSchema
     });
 
-    // Register roles
+    // Đăng ký roles
     DatabaseManager.registerRoles([
       {
         roleName: 'admin',
@@ -495,11 +299,8 @@ export class DatabaseService {
       }
     ]);
 
-    // Initialize core database
+    // Khởi tạo core database
     await DatabaseManager.initializeCoreConnection();
-
-    // Register all services
-    ServiceRegistration.registerAllServices();
 
     this.isInitialized = true;
     console.log('DatabaseService initialized for React Native');
@@ -520,17 +321,17 @@ export class DatabaseService {
 }
 ```
 
-## 4. Setup for Node.js
+## 3. Setup cho Node.js
 
-### Install dependencies
+### Cài đặt dependencies
 
 ```bash
 npm install sqlite3
-# Or 
+# Hoặc 
 npm install better-sqlite3
 ```
 
-### Create Adapter for Node.js
+### Tạo Adapter cho Node.js
 
 ```typescript
 // adapters/NodeAdapter.ts
@@ -547,7 +348,7 @@ export class NodeAdapter extends BaseAdapter {
   async connect(dbPath: string): Promise<any> {
     const fullPath = path.resolve(dbPath);
     
-    // Create directory if it doesn't exist
+    // Tạo thư mục nếu chưa tồn tại
     const dir = path.dirname(fullPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -613,13 +414,12 @@ class NodeConnection {
 }
 ```
 
-### Initialize DatabaseManager (Node.js)
+### Khởi tạo DatabaseManager (Node.js)
 
 ```typescript
 // services/DatabaseService.ts
 import { DatabaseManager, DatabaseFactory } from '@dqcai/sqlite';
 import { NodeAdapter } from '../adapters/NodeAdapter';
-import { ServiceRegistration } from './ServiceRegistration';
 import path from 'path';
 
 export class DatabaseService {
@@ -629,16 +429,16 @@ export class DatabaseService {
   static async initialize() {
     if (this.isInitialized) return;
 
-    // Register adapter
+    // Đăng ký adapter
     DatabaseFactory.registerAdapter(new NodeAdapter());
 
-    // Register schemas
+    // Đăng ký schemas
     DatabaseManager.registerSchemas({
       core: coreSchema,
       users: userSchema
     });
 
-    // Register roles
+    // Đăng ký roles
     DatabaseManager.registerRoles([
       {
         roleName: 'admin',
@@ -653,11 +453,8 @@ export class DatabaseService {
       }
     ]);
 
-    // Initialize core database
+    // Khởi tạo core database
     await DatabaseManager.initializeCoreConnection();
-
-    // Register all services
-    ServiceRegistration.registerAllServices();
 
     this.isInitialized = true;
     console.log('DatabaseService initialized for Node.js');
@@ -678,7 +475,7 @@ export class DatabaseService {
 }
 ```
 
-## 5. Creating Services with BaseService
+## 4. Tạo Services với BaseService
 
 ### User Service
 
@@ -705,21 +502,21 @@ interface Profile {
 }
 
 export class UserService extends BaseService<User> {
-  constructor(schemaName?: string, tableName?: string) {
-    super(schemaName || 'users', tableName || 'users');
+  constructor() {
+    super('users', 'users'); // schema name, table name
     this.setPrimaryKeyFields(['id']);
   }
 
-  // Create new user
+  // Tạo user mới
   async createUser(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User | null> {
     try {
-      // Check if email already exists
+      // Kiểm tra email đã tồn tại chưa
       const existingUser = await this.findFirst({ email: userData.email });
       if (existingUser) {
         throw new Error('Email already exists');
       }
 
-      // Check if username already exists  
+      // Kiểm tra username đã tồn tại chưa  
       const existingUsername = await this.findFirst({ username: userData.username });
       if (existingUsername) {
         throw new Error('Username already exists');
@@ -737,7 +534,7 @@ export class UserService extends BaseService<User> {
     }
   }
 
-  // Update user
+  // Cập nhật user
   async updateUser(id: number, userData: Partial<User>): Promise<User | null> {
     try {
       const updatedUser = await this.update(id, {
@@ -751,17 +548,17 @@ export class UserService extends BaseService<User> {
     }
   }
 
-  // Find user by email
+  // Tìm user theo email
   async findByEmail(email: string): Promise<User | null> {
     return await this.findFirst({ email });
   }
 
-  // Find user by username
+  // Tìm user theo username
   async findByUsername(username: string): Promise<User | null> {
     return await this.findFirst({ username });
   }
 
-  // Get all users with pagination
+  // Lấy tất cả users với phân trang
   async getAllUsers(page: number = 1, limit: number = 10): Promise<User[]> {
     const offset = (page - 1) * limit;
     return await this.findAll({}, {
@@ -771,21 +568,21 @@ export class UserService extends BaseService<User> {
     });
   }
 
-  // Soft delete user
+  // Xóa user (soft delete bằng cách cập nhật trường deleted_at)
   async softDeleteUser(id: number): Promise<boolean> {
     const result = await this.update(id, {
       updated_at: new Date().toISOString(),
-      // deleted_at: new Date().toISOString() // if this field exists in schema
+      // deleted_at: new Date().toISOString() // nếu có field này trong schema
     });
     return result !== null;
   }
 
-  // Count total users
+  // Đếm tổng số users
   async getTotalUsers(): Promise<number> {
     return await this.count();
   }
 
-  // Search users
+  // Tìm kiếm users
   async searchUsers(searchTerm: string): Promise<User[]> {
     const dao = await this.init().then(() => this.dao!);
     const sql = `
@@ -800,27 +597,27 @@ export class UserService extends BaseService<User> {
 }
 
 export class ProfileService extends BaseService<Profile> {
-  constructor(schemaName?: string, tableName?: string) {
-    super(schemaName || 'users', tableName || 'profiles');
+  constructor() {
+    super('users', 'profiles');
     this.setPrimaryKeyFields(['id']);
   }
 
-  // Create profile for user
+  // Tạo profile cho user
   async createProfile(profileData: Omit<Profile, 'id'>): Promise<Profile | null> {
     return await this.create(profileData);
   }
 
-  // Get profile by user_id
+  // Lấy profile theo user_id
   async getProfileByUserId(userId: number): Promise<Profile | null> {
     return await this.findFirst({ user_id: userId });
   }
 
-  // Update profile
+  // Cập nhật profile
   async updateProfile(id: number, profileData: Partial<Profile>): Promise<Profile | null> {
     return await this.update(id, profileData);
   }
 
-  // Get user with profile
+  // Lấy thông tin user và profile
   async getUserWithProfile(userId: number): Promise<any> {
     const dao = await this.init().then(() => this.dao!);
     const sql = `
@@ -850,18 +647,18 @@ interface Setting {
 }
 
 export class SettingsService extends BaseService<Setting> {
-  constructor(schemaName?: string, tableName?: string) {
-    super(schemaName || 'core', tableName || 'settings');
+  constructor() {
+    super('core', 'settings');
     this.setPrimaryKeyFields(['key']);
   }
 
-  // Get setting value
+  // Lấy giá trị setting
   async getSetting(key: string): Promise<string | null> {
     const setting = await this.findById(key);
     return setting?.value || null;
   }
 
-  // Set setting value
+  // Đặt giá trị setting
   async setSetting(key: string, value: string, description?: string): Promise<void> {
     const existing = await this.findById(key);
     
@@ -872,19 +669,19 @@ export class SettingsService extends BaseService<Setting> {
     }
   }
 
-  // Get all settings
+  // Lấy tất cả settings
   async getAllSettings(): Promise<Setting[]> {
     return await this.findAll({}, {
       orderBy: [{ name: 'key', direction: 'ASC' }]
     });
   }
 
-  // Delete setting
+  // Xóa setting
   async deleteSetting(key: string): Promise<boolean> {
     return await this.delete(key);
   }
 
-  // Get multiple settings at once
+  // Lấy nhiều settings cùng lúc
   async getMultipleSettings(keys: string[]): Promise<Record<string, string>> {
     const dao = await this.init().then(() => this.dao!);
     const placeholders = keys.map(() => '?').join(',');
@@ -901,43 +698,45 @@ export class SettingsService extends BaseService<Setting> {
 }
 ```
 
-## 6. Using in Applications
+## 5. Sử dụng trong ứng dụng
 
-### In React Native
+### Trong React Native
 
 ```typescript
-// App.tsx or index.js
+// App.tsx hoặc index.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Alert } from 'react-native';
 import { DatabaseService } from './services/DatabaseService';
-import { ServiceRegistration } from './services/ServiceRegistration';
-import { ServiceMonitor } from './services/ServiceMonitor';
 import { UserService, ProfileService } from './services/UserService';
 import { SettingsService } from './services/CoreService';
 
 const App = () => {
   const [isDbReady, setIsDbReady] = useState(false);
-  const [serviceMonitor] = useState(new ServiceMonitor());
+  const [userService] = useState(new UserService());
+  const [profileService] = useState(new ProfileService());
+  const [settingsService] = useState(new SettingsService());
 
   useEffect(() => {
     initializeDatabase();
     
     return () => {
-      // Cleanup when component unmounts
+      // Cleanup khi component unmount
       DatabaseService.closeAll();
     };
   }, []);
 
   const initializeDatabase = async () => {
     try {
-      // Initialize database
+      // Khởi tạo database
       await DatabaseService.initialize();
       
-      // Set role for current user
+      // Đặt role cho user hiện tại
       await DatabaseService.setUserRole(['user']);
       
-      // Start service monitoring
-      await serviceMonitor.startPeriodicHealthCheck(60000); // Every minute
+      // Khởi tạo services
+      await userService.init();
+      await profileService.init();
+      await settingsService.init();
       
       setIsDbReady(true);
       console.log('Database ready!');
@@ -951,9 +750,6 @@ const App = () => {
     if (!isDbReady) return;
 
     try {
-      const userService = await ServiceRegistration.getService<UserService>('users', 'users');
-      const profileService = await ServiceRegistration.getService<ProfileService>('users', 'profiles');
-
       const newUser = await userService.createUser({
         username: 'john_doe',
         email: 'john@example.com',
@@ -961,7 +757,7 @@ const App = () => {
       });
 
       if (newUser) {
-        // Create profile for user
+        // Tạo profile cho user
         await profileService.createProfile({
           user_id: newUser.id!,
           first_name: 'John',
@@ -981,7 +777,6 @@ const App = () => {
     if (!isDbReady) return;
 
     try {
-      const userService = await ServiceRegistration.getService<UserService>('users', 'users');
       const users = await userService.getAllUsers(1, 10);
       console.log('Users:', users);
       Alert.alert('Users', `Found ${users.length} users`);
@@ -994,8 +789,6 @@ const App = () => {
     if (!isDbReady) return;
 
     try {
-      const settingsService = await ServiceRegistration.getService<SettingsService>('core', 'settings');
-      
       await settingsService.setSetting(
         'app_version',
         '1.0.0',
@@ -1006,21 +799,6 @@ const App = () => {
       Alert.alert('Setting', `App version: ${version}`);
     } catch (error) {
       console.error('Error setting value:', error);
-    }
-  };
-
-  const handleGetServiceStats = async () => {
-    if (!isDbReady) return;
-
-    try {
-      const stats = serviceMonitor.getServiceStats();
-      const healthReport = await ServiceRegistration.getHealthReport();
-      
-      Alert.alert('Service Stats', 
-        `Total: ${stats.totalServices}, Healthy: ${healthReport.healthyServices}/${healthReport.totalServices}`
-      );
-    } catch (error) {
-      console.error('Error getting service stats:', error);
     }
   };
 
@@ -1045,12 +823,6 @@ const App = () => {
         onPress={handleSetSetting}
         disabled={!isDbReady}
       />
-      
-      <Button
-        title="Get Service Stats"
-        onPress={handleGetServiceStats}
-        disabled={!isDbReady}
-      />
     </View>
   );
 };
@@ -1058,36 +830,38 @@ const App = () => {
 export default App;
 ```
 
-### In Node.js
+### Trong Node.js
 
 ```typescript
 // app.ts
 import express from 'express';
 import { DatabaseService } from './services/DatabaseService';
-import { ServiceRegistration } from './services/ServiceRegistration';
-import { ServiceMonitor } from './services/ServiceMonitor';
 import { UserService, ProfileService } from './services/UserService';
 import { SettingsService } from './services/CoreService';
 
 const app = express();
 app.use(express.json());
 
-// Service monitor
-const serviceMonitor = new ServiceMonitor();
+// Services
+const userService = new UserService();
+const profileService = new ProfileService();
+const settingsService = new SettingsService();
 
-// Initialize database when starting server
+// Khởi tạo database khi start server
 async function initializeApp() {
   try {
     console.log('Initializing database...');
     
-    // Initialize DatabaseService
+    // Khởi tạo DatabaseService
     await DatabaseService.initialize();
     
-    // Set admin role for server
+    // Set role admin cho server
     await DatabaseService.setUserRole(['admin']);
     
-    // Start service monitoring
-    await serviceMonitor.startPeriodicHealthCheck(60000); // Every minute
+    // Khởi tạo services
+    await userService.init();
+    await profileService.init();
+    await settingsService.init();
     
     console.log('Database initialized successfully');
   } catch (error) {
@@ -1098,7 +872,7 @@ async function initializeApp() {
 
 // API Routes
 
-// POST /users - Create new user
+// POST /users - Tạo user mới
 app.post('/users', async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -1107,11 +881,10 @@ app.post('/users', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const userService = await ServiceRegistration.getService<UserService>('users', 'users');
     const user = await userService.createUser({
       username,
       email,
-      password // Should hash password before saving
+      password // Nên hash password trước khi lưu
     });
 
     res.status(201).json({ success: true, user });
@@ -1121,13 +894,12 @@ app.post('/users', async (req, res) => {
   }
 });
 
-// GET /users - Get list of users
+// GET /users - Lấy danh sách users
 app.get('/users', async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     
-    const userService = await ServiceRegistration.getService<UserService>('users', 'users');
     const users = await userService.getAllUsers(page, limit);
     const total = await userService.getTotalUsers();
     
@@ -1147,11 +919,10 @@ app.get('/users', async (req, res) => {
   }
 });
 
-// GET /users/:id - Get user by ID
+// GET /users/:id - Lấy user theo ID
 app.get('/users/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const userService = await ServiceRegistration.getService<UserService>('users', 'users');
     const user = await userService.findById(id);
     
     if (!user) {
@@ -1165,13 +936,12 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
-// PUT /users/:id - Update user
+// PUT /users/:id - Cập nhật user
 app.put('/users/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const updates = req.body;
     
-    const userService = await ServiceRegistration.getService<UserService>('users', 'users');
     const user = await userService.updateUser(id, updates);
     
     if (!user) {
@@ -1185,11 +955,10 @@ app.put('/users/:id', async (req, res) => {
   }
 });
 
-// DELETE /users/:id - Delete user
+// DELETE /users/:id - Xóa user
 app.delete('/users/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const userService = await ServiceRegistration.getService<UserService>('users', 'users');
     const success = await userService.delete(id);
     
     if (!success) {
@@ -1203,13 +972,12 @@ app.delete('/users/:id', async (req, res) => {
   }
 });
 
-// POST /users/:id/profile - Create profile for user
+// POST /users/:id/profile - Tạo profile cho user
 app.post('/users/:id/profile', async (req, res) => {
   try {
     const user_id = parseInt(req.params.id);
     const profileData = { ...req.body, user_id };
     
-    const profileService = await ServiceRegistration.getService<ProfileService>('users', 'profiles');
     const profile = await profileService.createProfile(profileData);
     res.status(201).json({ success: true, profile });
   } catch (error: any) {
@@ -1218,11 +986,10 @@ app.post('/users/:id/profile', async (req, res) => {
   }
 });
 
-// GET /users/:id/full - Get user with profile
+// GET /users/:id/full - Lấy user với profile
 app.get('/users/:id/full', async (req, res) => {
   try {
     const user_id = parseInt(req.params.id);
-    const profileService = await ServiceRegistration.getService<ProfileService>('users', 'profiles');
     const userWithProfile = await profileService.getUserWithProfile(user_id);
     
     if (!userWithProfile) {
@@ -1239,7 +1006,6 @@ app.get('/users/:id/full', async (req, res) => {
 // Settings API
 app.get('/settings/:key', async (req, res) => {
   try {
-    const settingsService = await ServiceRegistration.getService<SettingsService>('core', 'settings');
     const value = await settingsService.getSetting(req.params.key);
     res.json({ success: true, value });
   } catch (error: any) {
@@ -1251,41 +1017,10 @@ app.get('/settings/:key', async (req, res) => {
 app.post('/settings', async (req, res) => {
   try {
     const { key, value, description } = req.body;
-    const settingsService = await ServiceRegistration.getService<SettingsService>('core', 'settings');
     await settingsService.setSetting(key, value, description);
     res.json({ success: true, message: 'Setting saved' });
   } catch (error: any) {
     console.error('Error setting value:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Service management API
-app.get('/admin/services', async (req, res) => {
-  try {
-    const serviceInfo = ServiceRegistration.getServiceInfo();
-    const healthReport = await ServiceRegistration.getHealthReport();
-    const stats = serviceMonitor.getServiceStats();
-    
-    res.json({
-      success: true,
-      services: serviceInfo,
-      health: healthReport,
-      stats
-    });
-  } catch (error: any) {
-    console.error('Error getting service info:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/admin/services/cleanup/:schema?', async (req, res) => {
-  try {
-    const schema = req.params.schema;
-    await serviceMonitor.cleanupUnusedServices(schema);
-    res.json({ success: true, message: 'Cleanup completed' });
-  } catch (error: any) {
-    console.error('Error cleaning up services:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1313,9 +1048,9 @@ initializeApp().then(() => {
 });
 ```
 
-## 7. Database Management with DatabaseManager
+## 6. Quản lý Database với DatabaseManager
 
-### Opening/Closing Connections
+### Mở/Đóng Connections
 
 ```typescript
 // DatabaseHelper.ts
@@ -1323,7 +1058,7 @@ import { DatabaseManager } from '@dqcai/sqlite';
 
 export class DatabaseHelper {
   
-  // Check connection status
+  // Kiểm tra trạng thái kết nối
   static checkConnectionStatus(): void {
     const connections = DatabaseManager.getConnections();
     const count = DatabaseManager.getConnectionCount();
@@ -1334,7 +1069,7 @@ export class DatabaseHelper {
     console.log('Connection details:', connections);
   }
 
-  // Close specific connection
+  // Đóng kết nối cụ thể
   static async closeSpecificConnection(dbKey: string): Promise<void> {
     try {
       await DatabaseManager.closeConnection(dbKey);
@@ -1344,7 +1079,7 @@ export class DatabaseHelper {
     }
   }
 
-  // Reopen connection
+  // Mở lại kết nối
   static async reopenConnection(dbKey: string): Promise<void> {
     try {
       const dao = await DatabaseManager.getLazyLoading(dbKey);
@@ -1356,7 +1091,7 @@ export class DatabaseHelper {
     }
   }
 
-  // Ensure connection exists
+  // Đảm bảo kết nối tồn tại
   static async ensureConnection(dbKey: string): Promise<void> {
     try {
       const dao = await DatabaseManager.ensureDatabaseConnection(dbKey);
@@ -1368,7 +1103,7 @@ export class DatabaseHelper {
     }
   }
 
-  // Execute cross-schema transaction
+  // Thực hiện transaction cross-schema
   static async executeTransactionAcrossSchemas(
     schemas: string[],
     operations: (daos: Record<string, any>) => Promise<void>
@@ -1382,11 +1117,11 @@ export class DatabaseHelper {
     }
   }
 
-  // Event listeners for reconnection
+  // Event listeners cho reconnection
   static setupReconnectionHandlers(): void {
     DatabaseManager.onDatabaseReconnect('users', (dao) => {
       console.log('Users database reconnected');
-      // Re-initialize services if needed
+      // Re-initialize services nếu cần
     });
 
     DatabaseManager.onDatabaseReconnect('core', (dao) => {
@@ -1395,7 +1130,7 @@ export class DatabaseHelper {
     });
   }
 
-  // Health check all connections
+  // Health check tất cả connections
   static async performHealthCheck(): Promise<void> {
     const connections = DatabaseManager.getConnections();
     
@@ -1406,7 +1141,7 @@ export class DatabaseHelper {
       } catch (error) {
         console.error(`${dbKey}: Unhealthy -`, error);
         
-        // Try reconnect if needed
+        // Thử reconnect nếu cần
         try {
           await DatabaseManager.ensureDatabaseConnection(dbKey);
           console.log(`${dbKey}: Reconnected successfully`);
@@ -1419,9 +1154,9 @@ export class DatabaseHelper {
 }
 ```
 
-## 8. Data Import/Export
+## 7. Import/Export Dữ liệu
 
-### Import from CSV
+### Import từ CSV
 
 ```typescript
 // services/DataImportService.ts
@@ -1429,7 +1164,7 @@ import { DatabaseManager, ImportResult, ColumnMapping } from '@dqcai/sqlite';
 
 export class DataImportService {
   
-  // Import users from CSV
+  // Import users từ CSV
   static async importUsersFromCSV(csvData: string): Promise<ImportResult> {
     try {
       const result = await DatabaseManager.importFromCSV(
@@ -1465,7 +1200,7 @@ export class DataImportService {
     }
   }
 
-  // Import with column mapping
+  // Import với column mapping
   static async importUsersWithMapping(
     data: Record<string, any>[],
     columnMappings: ColumnMapping[]
@@ -1491,7 +1226,7 @@ export class DataImportService {
     }
   }
 
-  // Bulk import multiple tables at once
+  // Bulk import nhiều bảng cùng lúc
   static async bulkImportData(importConfigs: Array<{
     databaseKey: string;
     tableName: string;
@@ -1506,12 +1241,12 @@ export class DataImportService {
         executionTime: result.executionTime
       });
 
-      // Log details for each table
+      // Log chi tiết từng bảng
       Object.entries(result.results).forEach(([key, importResult]) => {
         console.log(`${key}: ${importResult.successRows}/${importResult.totalRows} rows imported`);
       });
 
-      // Log errors if any
+      // Log lỗi nếu có
       if (Object.keys(result.errors).length > 0) {
         console.error('Import errors:', result.errors);
       }
@@ -1523,20 +1258,20 @@ export class DataImportService {
   }
 }
 
-// Example import usage
+// Ví dụ sử dụng import service
 async function exampleImportUsage() {
-  // Sample CSV data
+  // CSV data mẫu
   const csvData = `username,email,password,first_name,last_name
 john_doe,john@example.com,password123,John,Doe
 jane_smith,jane@example.com,password456,Jane,Smith
 bob_wilson,bob@example.com,password789,Bob,Wilson`;
 
   try {
-    // Import from CSV
+    // Import từ CSV
     const importResult = await DataImportService.importUsersFromCSV(csvData);
     console.log('CSV Import result:', importResult);
 
-    // Import with column mapping
+    // Import với column mapping
     const mappedData = [
       { user_name: 'alice', user_email: 'alice@test.com', pwd: 'pass123' },
       { user_name: 'charlie', user_email: 'charlie@test.com', pwd: 'pass456' }
@@ -1564,7 +1299,7 @@ bob_wilson,bob@example.com,password789,Bob,Wilson`;
 }
 ```
 
-### Export Data
+### Export dữ liệu
 
 ```typescript
 // services/DataExportService.ts
@@ -1572,7 +1307,7 @@ import { DatabaseManager } from '@dqcai/sqlite';
 
 export class DataExportService {
   
-  // Export users to CSV
+  // Export users ra CSV
   static async exportUsersToCSV(): Promise<string> {
     try {
       const dao = DatabaseManager.get('users');
@@ -1590,15 +1325,15 @@ export class DataExportService {
         return 'No data to export';
       }
 
-      // Create CSV header
+      // Tạo CSV header
       const headers = Object.keys(result.rows[0]);
       let csvContent = headers.join(',') + '\n';
 
-      // Add data rows
+      // Thêm data rows
       result.rows.forEach(row => {
         const values = headers.map(header => {
           const value = row[header];
-          // Escape quotes and wrap in quotes if contains comma
+          // Escape quotes và wrap trong quotes nếu chứa comma
           if (value === null || value === undefined) {
             return '';
           }
@@ -1618,7 +1353,7 @@ export class DataExportService {
     }
   }
 
-  // Export with custom conditions
+  // Export với điều kiện tùy chỉnh
   static async exportUsersWithConditions(
     whereClause?: string,
     params?: any[]
@@ -1645,7 +1380,7 @@ export class DataExportService {
     }
   }
 
-  // Create full database backup
+  // Export dữ liệu backup toàn bộ database
   static async createDatabaseBackup(dbKey: string): Promise<{
     tables: Record<string, any[]>;
     metadata: any;
@@ -1653,21 +1388,21 @@ export class DataExportService {
     try {
       const dao = DatabaseManager.get(dbKey);
       
-      // Get list of tables
+      // Lấy danh sách tables
       const tablesResult = await dao.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
       );
       
       const backup: Record<string, any[]> = {};
       
-      // Export each table
+      // Export từng table
       for (const tableRow of tablesResult.rows) {
         const tableName = tableRow.name;
         const dataResult = await dao.execute(`SELECT * FROM ${tableName}`);
         backup[tableName] = dataResult.rows;
       }
 
-      // Add metadata
+      // Thêm metadata
       const dbInfo = await dao.getDatabaseInfo();
       
       return {
@@ -1685,21 +1420,21 @@ export class DataExportService {
   }
 }
 
-// Example export usage
+// Ví dụ sử dụng export
 async function exampleExportUsage() {
   try {
-    // Export users to CSV
+    // Export users ra CSV
     const csvContent = await DataExportService.exportUsersToCSV();
     console.log('CSV Export:', csvContent);
 
-    // Export users with conditions
+    // Export users với điều kiện
     const recentUsers = await DataExportService.exportUsersWithConditions(
       "u.created_at > ?",
-      [new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()] // Last 30 days
+      [new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()] // 30 ngày gần đây
     );
     console.log('Recent users:', recentUsers);
 
-    // Backup entire users database
+    // Backup toàn bộ database users
     const backup = await DataExportService.createDatabaseBackup('users');
     console.log('Database backup:', backup);
 
@@ -1709,7 +1444,7 @@ async function exampleExportUsage() {
 }
 ```
 
-## 9. Best Practices & Tips
+## 8. Best Practices & Tips
 
 ### Error Handling
 
@@ -1762,7 +1497,7 @@ export class DatabaseErrorHandler {
   }
 }
 
-// Using error handler
+// Sử dụng error handler
 class SafeUserService extends UserService {
   async createUser(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User | null> {
     return DatabaseErrorHandler.withRetry(async () => {
@@ -1770,7 +1505,7 @@ class SafeUserService extends UserService {
         return await super.createUser(userData);
       } catch (error) {
         DatabaseErrorHandler.handleServiceError(error, 'createUser');
-        throw error; // Re-throw after handling
+        throw error; // Re-throw sau khi handle
       }
     });
   }
@@ -1783,7 +1518,7 @@ class SafeUserService extends UserService {
 // utils/PerformanceOptimizer.ts
 export class PerformanceOptimizer {
   
-  // Batch operations to reduce database calls
+  // Batch operations để giảm số lần gọi database
   static async batchCreateUsers(
     userService: UserService,
     users: Array<Omit<User, 'id' | 'created_at' | 'updated_at'>>
@@ -1840,7 +1575,7 @@ export class PerformanceOptimizer {
 
 ```typescript
 // utils/TestHelpers.ts
-import { DatabaseManager, ServiceManager } from '@dqcai/sqlite';
+import { DatabaseManager } from '@dqcai/sqlite';
 
 export class DatabaseTestHelpers {
   
@@ -1874,22 +1609,15 @@ export class DatabaseTestHelpers {
 
     return createdUsers;
   }
-
-  static async teardownTest(): Promise<void> {
-    await DatabaseManager.closeAll();
-    ServiceManager.resetInstance();
-  }
 }
 
 // Example test
 describe('UserService Tests', () => {
-  let serviceManager: ServiceManager;
   let userService: UserService;
 
   beforeAll(async () => {
     await DatabaseTestHelpers.setupTestDatabase();
-    serviceManager = ServiceManager.getInstance();
-    userService = await serviceManager.getService('test_users', 'users') as UserService;
+    userService = new UserService();
     await userService.init();
   });
 
@@ -1898,7 +1626,7 @@ describe('UserService Tests', () => {
   });
 
   afterAll(async () => {
-    await DatabaseTestHelpers.teardownTest();
+    await DatabaseManager.closeAll();
   });
 
   test('should create user successfully', async () => {
@@ -1913,29 +1641,21 @@ describe('UserService Tests', () => {
     expect(user?.username).toBe(userData.username);
     expect(user?.email).toBe(userData.email);
   });
-
-  test('should manage service lifecycle', async () => {
-    const serviceInfo = serviceManager.getAllServiceInfo();
-    expect(serviceInfo.length).toBeGreaterThan(0);
-
-    const healthReport = await serviceManager.healthCheck();
-    expect(healthReport.overallHealth).toBe(true);
-  });
 });
 ```
 
-## 10. Troubleshooting Common Issues
+## 9. Troubleshooting Common Issues
 
 ### Database Locked
 
 ```typescript
-// Resolve database locked issues
+// Giải quyết database locked
 const handleDatabaseLocked = async () => {
   try {
-    // Enable WAL mode to avoid locks
+    // Enable WAL mode để tránh lock
     const dao = DatabaseManager.get('users');
     await dao.execute('PRAGMA journal_mode = WAL');
-    await dao.execute('PRAGMA busy_timeout = 30000'); // 30 second timeout
+    await dao.execute('PRAGMA busy_timeout = 30000'); // 30 giây timeout
   } catch (error) {
     console.error('Error setting WAL mode:', error);
   }
@@ -1945,7 +1665,7 @@ const handleDatabaseLocked = async () => {
 ### Connection Issues
 
 ```typescript
-// Check and restore connections
+// Kiểm tra và khôi phục kết nối
 const ensureConnectionHealth = async (dbKey: string) => {
   try {
     const dao = DatabaseManager.get(dbKey);
@@ -1959,33 +1679,7 @@ const ensureConnectionHealth = async (dbKey: string) => {
 };
 ```
 
-### Service Management Issues
-
-```typescript
-// Service troubleshooting
-const troubleshootServices = async () => {
-  const serviceManager = ServiceManager.getInstance();
-  
-  // Get service health report
-  const healthReport = await serviceManager.healthCheck();
-  console.log('Service Health:', healthReport);
-  
-  // Clean up problematic services
-  if (!healthReport.overallHealth) {
-    const unhealthyServices = healthReport.services.filter(s => !s.healthy);
-    
-    for (const service of unhealthyServices) {
-      const [schemaName, tableName] = service.serviceKey.split(':');
-      console.log(`Attempting to restart service: ${service.serviceKey}`);
-      
-      await serviceManager.destroyService(schemaName, tableName);
-      await serviceManager.getService(schemaName, tableName);
-    }
-  }
-};
-```
-
-## 11. Migration & Schema Updates
+## 10. Migration & Schema Updates
 
 ```typescript
 // migrations/001_add_user_status.ts
@@ -2011,7 +1705,7 @@ export const migration_001 = {
       DROP INDEX IF EXISTS idx_user_status
     `);
     
-    // SQLite doesn't support DROP COLUMN, need to recreate table
+    // SQLite không hỗ trợ DROP COLUMN, cần recreate table
     await dao.execute(`
       CREATE TABLE users_backup AS 
       SELECT id, username, email, password, created_at, updated_at 
@@ -2039,7 +1733,7 @@ export const migration_001 = {
   }
 };
 
-// Run migration
+// Chạy migration
 const runMigration = async () => {
   const dao = DatabaseManager.get('users');
   const currentVersion = await dao.getSchemaVersion();
@@ -2052,512 +1746,56 @@ const runMigration = async () => {
 };
 ```
 
-## 12. Advanced Features
+## Kết luận
 
-### Cross-Schema Transactions with ServiceManager
+Universal SQLite cung cấp một giải pháp mạnh mẽ và linh hoạt để quản lý cơ sở dữ liệu SQLite across platforms. Với DatabaseManager và BaseService, bạn có thể:
 
-```typescript
-// Advanced transaction management across multiple services
-export class TransactionManager {
-  private serviceManager = ServiceManager.getInstance();
+- Dễ dàng quản lý nhiều database connections
+- Thực hiện CRUD operations một cách type-safe
+- Import/Export dữ liệu hiệu quả
+- Quản lý schema và migrations
+- Handle errors và performance optimization
 
-  async executeUserProfileTransaction(
-    userData: Omit<User, 'id' | 'created_at' | 'updated_at'>,
-    profileData: Omit<Profile, 'id' | 'user_id'>
-  ): Promise<{ user: User; profile: Profile }> {
-    
-    // Execute transaction within the same schema (users)
-    return await this.serviceManager.executeSchemaTransaction('users', async (services) => {
-      const userService = services.find(s => s.tableName === 'users') as UserService;
-      const profileService = services.find(s => s.tableName === 'profiles') as ProfileService;
-
-      // Create user first
-      const user = await userService.createUser(userData);
-      if (!user) {
-        throw new Error('Failed to create user');
-      }
-
-      // Create profile for the user
-      const profile = await profileService.createProfile({
-        ...profileData,
-        user_id: user.id!
-      });
-
-      if (!profile) {
-        throw new Error('Failed to create profile');
-      }
-
-      return { user, profile };
-    });
-  }
-
-  async executeMultiSchemaOperation(): Promise<void> {
-    // For operations across different schemas (databases)
-    await DatabaseManager.executeCrossSchemaTransaction(['users', 'core'], async (daos) => {
-      const usersDao = daos.users;
-      const coreDao = daos.core;
-
-      // Update user count in settings
-      const userCount = await usersDao.execute('SELECT COUNT(*) as count FROM users');
-      await coreDao.execute(
-        'INSERT OR REPLACE INTO settings (key, value, description) VALUES (?, ?, ?)',
-        ['user_count', userCount.rows[0].count.toString(), 'Total number of users']
-      );
-
-      // Log system activity
-      await coreDao.execute(
-        'INSERT OR REPLACE INTO settings (key, value, description) VALUES (?, ?, ?)',
-        ['last_user_sync', new Date().toISOString(), 'Last user count sync']
-      );
-    });
-  }
-}
-```
-
-### Service Composition and Dependency Injection
-
-```typescript
-// Advanced service composition
-export class ServiceComposer {
-  private serviceManager = ServiceManager.getInstance();
-
-  // Compose services with dependencies
-  async createUserManagementService(): Promise<UserManagementService> {
-    const userService = await this.serviceManager.getService('users', 'users') as UserService;
-    const profileService = await this.serviceManager.getService('users', 'profiles') as ProfileService;
-    const settingsService = await this.serviceManager.getService('core', 'settings') as SettingsService;
-
-    return new UserManagementService(userService, profileService, settingsService);
-  }
-}
-
-// Composite service example
-export class UserManagementService {
-  constructor(
-    private userService: UserService,
-    private profileService: ProfileService,
-    private settingsService: SettingsService
-  ) {}
-
-  async createCompleteUser(
-    userData: Omit<User, 'id' | 'created_at' | 'updated_at'>,
-    profileData: Omit<Profile, 'id' | 'user_id'>
-  ): Promise<any> {
-    // Get default settings
-    const defaultRole = await this.settingsService.getSetting('default_user_role') || 'user';
-    
-    return await this.userService.executeTransaction(async () => {
-      // Create user
-      const user = await this.userService.createUser(userData);
-      if (!user) throw new Error('Failed to create user');
-
-      // Create profile
-      const profile = await this.profileService.createProfile({
-        ...profileData,
-        user_id: user.id!
-      });
-
-      // Update user count
-      const currentCount = await this.userService.count();
-      await this.settingsService.setSetting(
-        'total_users',
-        currentCount.toString(),
-        'Total registered users'
-      );
-
-      return { user, profile, defaultRole };
-    });
-  }
-
-  async getUserDashboardData(userId: number): Promise<any> {
-    const [user, profile, recentSettings] = await Promise.all([
-      this.userService.findById(userId),
-      this.profileService.getProfileByUserId(userId),
-      this.settingsService.getMultipleSettings(['app_version', 'maintenance_mode', 'user_count'])
-    ]);
-
-    return {
-      user,
-      profile,
-      settings: recentSettings,
-      isComplete: !!(user && profile)
-    };
-  }
-}
-```
-
-### Real-time Monitoring and Alerting
-
-```typescript
-// Real-time service monitoring
-export class ServiceHealthMonitor {
-  private serviceManager = ServiceManager.getInstance();
-  private alerts: Array<{ timestamp: string; level: string; message: string }> = [];
-  private healthCheckInterval: NodeJS.Timeout | null = null;
-
-  startMonitoring(intervalMs: number = 30000): void {
-    this.setupEventHandlers();
-    
-    this.healthCheckInterval = setInterval(async () => {
-      await this.performHealthCheck();
-    }, intervalMs);
-
-    console.log('Service health monitoring started');
-  }
-
-  stopMonitoring(): void {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval);
-      this.healthCheckInterval = null;
-    }
-    console.log('Service health monitoring stopped');
-  }
-
-  private setupEventHandlers(): void {
-    this.serviceManager.on('SERVICE_ERROR', (event) => {
-      this.addAlert('ERROR', `Service error in ${event.serviceKey}: ${event.error?.message}`);
-    });
-
-    this.serviceManager.on('SERVICE_CREATED', (event) => {
-      this.addAlert('INFO', `Service created: ${event.serviceKey}`);
-    });
-
-    this.serviceManager.on('SERVICE_DESTROYED', (event) => {
-      this.addAlert('WARNING', `Service destroyed: ${event.serviceKey}`);
-    });
-  }
-
-  private async performHealthCheck(): Promise<void> {
-    try {
-      const healthReport = await this.serviceManager.healthCheck();
-      
-      if (!healthReport.overallHealth) {
-        this.addAlert('CRITICAL', `System unhealthy: ${healthReport.unhealthyServices}/${healthReport.totalServices} services down`);
-        
-        // Attempt automatic recovery
-        await this.attemptAutoRecovery(healthReport);
-      } else {
-        this.addAlert('INFO', `System healthy: All ${healthReport.totalServices} services operational`);
-      }
-    } catch (error) {
-      this.addAlert('ERROR', `Health check failed: ${error}`);
-    }
-  }
-
-  private async attemptAutoRecovery(healthReport: any): Promise<void> {
-    const unhealthyServices = healthReport.services.filter((s: any) => !s.healthy);
-    
-    for (const service of unhealthyServices) {
-      try {
-        const [schemaName, tableName] = service.serviceKey.split(':');
-        
-        // Try to restart the service
-        await this.serviceManager.destroyService(schemaName, tableName);
-        await this.serviceManager.initializeService(schemaName, tableName);
-        
-        this.addAlert('INFO', `Auto-recovery successful for ${service.serviceKey}`);
-      } catch (error) {
-        this.addAlert('ERROR', `Auto-recovery failed for ${service.serviceKey}: ${error}`);
-      }
-    }
-  }
-
-  private addAlert(level: string, message: string): void {
-    const alert = {
-      timestamp: new Date().toISOString(),
-      level,
-      message
-    };
-    
-    this.alerts.unshift(alert);
-    
-    // Keep only last 100 alerts
-    if (this.alerts.length > 100) {
-      this.alerts = this.alerts.slice(0, 100);
-    }
-
-    // Log based on severity
-    switch (level) {
-      case 'CRITICAL':
-      case 'ERROR':
-        console.error(`[${level}] ${message}`);
-        break;
-      case 'WARNING':
-        console.warn(`[${level}] ${message}`);
-        break;
-      default:
-        console.log(`[${level}] ${message}`);
-    }
-  }
-
-  getRecentAlerts(limit: number = 20): typeof this.alerts {
-    return this.alerts.slice(0, limit);
-  }
-
-  getSystemMetrics(): any {
-    const now = Date.now();
-    const hourAgo = now - (60 * 60 * 1000);
-    
-    const recentAlerts = this.alerts.filter(
-      alert => new Date(alert.timestamp).getTime() > hourAgo
-    );
-    
-    const alertsByLevel = recentAlerts.reduce((acc, alert) => {
-      acc[alert.level] = (acc[alert.level] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      serviceCount: this.serviceManager.getServiceCount(),
-      activeSchemas: this.serviceManager.getSchemas(),
-      recentAlerts: alertsByLevel,
-      systemUptime: process.uptime?.() || 0,
-      memoryUsage: process.memoryUsage?.() || null
-    };
-  }
-}
-```
-
-## 13. Production Deployment Considerations
-
-### Configuration Management
-
-```typescript
-// config/DatabaseConfig.ts
-export interface DatabaseConfig {
-  environment: 'development' | 'production' | 'test';
-  databases: {
-    [key: string]: {
-      path: string;
-      maxConnections?: number;
-      timeout?: number;
-      enableWAL?: boolean;
-    };
-  };
-  services: {
-    autoCleanupInterval?: number;
-    healthCheckInterval?: number;
-    maxIdleTime?: number;
-  };
-  monitoring: {
-    enabled: boolean;
-    alertThreshold?: number;
-    logLevel: 'debug' | 'info' | 'warn' | 'error';
-  };
-}
-
-export const productionConfig: DatabaseConfig = {
-  environment: 'production',
-  databases: {
-    users: {
-      path: '/data/users.db',
-      maxConnections: 10,
-      timeout: 30000,
-      enableWAL: true
-    },
-    core: {
-      path: '/data/core.db',
-      maxConnections: 5,
-      timeout: 30000,
-      enableWAL: true
-    }
-  },
-  services: {
-    autoCleanupInterval: 10 * 60 * 1000, // 10 minutes
-    healthCheckInterval: 30 * 1000, // 30 seconds
-    maxIdleTime: 30 * 60 * 1000 // 30 minutes
-  },
-  monitoring: {
-    enabled: true,
-    alertThreshold: 80, // Alert when 80% of services are unhealthy
-    logLevel: 'info'
-  }
-};
-
-export const developmentConfig: DatabaseConfig = {
-  environment: 'development',
-  databases: {
-    users: {
-      path: './dev/users.db',
-      enableWAL: false
-    },
-    core: {
-      path: './dev/core.db',
-      enableWAL: false
-    }
-  },
-  services: {
-    autoCleanupInterval: 5 * 60 * 1000, // 5 minutes
-    healthCheckInterval: 60 * 1000, // 1 minute
-    maxIdleTime: 10 * 60 * 1000 // 10 minutes
-  },
-  monitoring: {
-    enabled: true,
-    logLevel: 'debug'
-  }
-};
-```
-
-### Production Service Setup
-
-```typescript
-// production/ProductionSetup.ts
-import { DatabaseConfig, productionConfig } from '../config/DatabaseConfig';
-
-export class ProductionSetup {
-  static async initializeForProduction(config: DatabaseConfig = productionConfig): Promise<void> {
-    try {
-      // Apply production optimizations
-      await this.applyProductionOptimizations();
-      
-      // Initialize with config
-      await DatabaseService.initialize();
-      
-      // Setup monitoring
-      if (config.monitoring.enabled) {
-        const monitor = new ServiceHealthMonitor();
-        monitor.startMonitoring(config.services.healthCheckInterval);
-      }
-      
-      // Setup graceful shutdown
-      this.setupGracefulShutdown();
-      
-      console.log('Production setup completed successfully');
-    } catch (error) {
-      console.error('Production setup failed:', error);
-      process.exit(1);
-    }
-  }
-
-  private static async applyProductionOptimizations(): Promise<void> {
-    // Apply SQLite production settings
-    const connections = DatabaseManager.getConnections();
-    
-    for (const [dbKey, dao] of Object.entries(connections)) {
-      try {
-        // Enable WAL mode for better concurrency
-        await dao.execute('PRAGMA journal_mode = WAL');
-        
-        // Set aggressive timeout for busy database
-        await dao.execute('PRAGMA busy_timeout = 30000');
-        
-        // Optimize cache size
-        await dao.execute('PRAGMA cache_size = -64000'); // 64MB cache
-        
-        // Enable foreign key constraints
-        await dao.execute('PRAGMA foreign_keys = ON');
-        
-        // Optimize for faster queries
-        await dao.execute('PRAGMA synchronous = NORMAL');
-        await dao.execute('PRAGMA temp_store = MEMORY');
-        
-        console.log(`Production optimizations applied to ${dbKey}`);
-      } catch (error) {
-        console.error(`Failed to optimize ${dbKey}:`, error);
-      }
-    }
-  }
-
-  private static setupGracefulShutdown(): void {
-    const shutdown = async (signal: string) => {
-      console.log(`Received ${signal}. Starting graceful shutdown...`);
-      
-      try {
-        // Close all database connections
-        await DatabaseManager.closeAll();
-        
-        // Destroy service manager
-        const serviceManager = ServiceManager.getInstance();
-        await serviceManager.destroy();
-        
-        console.log('Graceful shutdown completed');
-        process.exit(0);
-      } catch (error) {
-        console.error('Error during shutdown:', error);
-        process.exit(1);
-      }
-    };
-
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGHUP', () => shutdown('SIGHUP'));
-    
-    // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
-      shutdown('uncaughtException');
-    });
-    
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      shutdown('unhandledRejection');
-    });
-  }
-}
-```
-
-## Conclusion
-
-Universal SQLite provides a powerful and flexible solution for managing SQLite databases across platforms. With DatabaseManager, ServiceManager, and BaseService, you can:
-
-- Easily manage multiple database connections and service lifecycles
-- Perform type-safe CRUD operations with automatic optimization
-- Import/Export data efficiently with built-in validation
-- Manage schemas and migrations systematically
-- Handle errors and performance optimization gracefully
-- Monitor service health and automate recovery
-- Deploy confidently in production environments
-
-The library supports both React Native and Node.js well, helping you build database-driven applications consistently and maintainably across different platforms.
-
-## Key Features Summary
-
-- **Cross-Platform**: Browser, Node.js, Deno, Bun, React Native (iOS/Android/Windows)
-- **Service Management**: Centralized lifecycle management with ServiceManager
-- **Type Safety**: Full TypeScript support for schemas, queries, and operations
-- **Performance**: Built-in optimization, connection pooling, and batch operations
-- **Monitoring**: Real-time health monitoring and automatic recovery
-- **Production Ready**: Comprehensive error handling and graceful shutdown
-- **Flexible**: Custom adapters, role-based access, and extensible architecture
-
-## Best Practices Summary
-
-1. **Always use ServiceManager for service lifecycle management**
-2. **Register services at application startup for better organization**
-3. **Use transactions for multi-step operations**
-4. **Implement proper error handling with retry mechanisms**
-5. **Monitor service health in production environments**
-6. **Use batch operations for better performance**
-7. **Enable WAL mode for production deployments**
-8. **Implement graceful shutdown procedures**
+Thư viện hỗ trợ tốt cho cả React Native và Node.js, giúp bạn xây dựng ứng dụng database-driven một cách nhất quán và maintainable.
 
 ## API Reference
 
-- **ServiceManager**: Centralized service lifecycle management
-- **DatabaseManager**: Connection and schema management
-- **BaseService**: Base class for CRUD operations with optimization
-- **UniversalDAO**: Core DAO for database operations
-- **QueryBuilder**: Fluent API for complex queries
-- **DatabaseFactory**: Factory for creating adapters and connections
-- **MigrationManager**: Schema versioning and migrations
-- **CSVImporter**: Data import/export utilities
+- **UniversalSQLite**: Singleton chính, methods: initialize, connect, getDAO, query, execute, importData, etc.
+- **UniversalDAO**: Core DAO cho CRUD, execute, importData.
+- **QueryBuilder**: Xây dựng query với fluent API.
+- **MigrationManager**: Quản lý migration.
+- **CSVImporter**: Import/export CSV.
+- **BaseService**: Base cho service layer.
+- **DatabaseFactory**: Factory để tạo DAO.
+- **DatabaseManager**: Quản lý connections, roles.
 
-See source code for detailed types and method signatures.
+Xem source code để biết chi tiết types và methods.
+
+
+## Best Practices
+
+1. **Always use transactions for multi-step operations**
+2. **Define schemas for type safety and validation**
+3. **Use parameterized queries to prevent SQL injection**
+4. **Implement proper error handling**
+5. **Close connections when done**
+6. **Use migrations for schema changes**
+7. **Batch large operations for better performance**
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes with proper TypeScript types
-4. Add comprehensive tests
-5. Update documentation
-6. Submit a pull request
+3. Make your changes
+4. Add tests
+5. Submit a pull request
 
-## License
+
+## 📄 License
 
 MIT © [Cuong Doan](https://github.com/cuongdqpayment)
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - [sqlite3](https://www.npmjs.com/package/sqlite3) - Node.js SQLite bindings
 - [sql.js](https://github.com/sql-js/sql.js) - SQLite compiled to WebAssembly
@@ -2565,14 +1803,14 @@ MIT © [Cuong Doan](https://github.com/cuongdqpayment)
 - [react-native-sqlite-storage](https://github.com/andpor/react-native-sqlite-storage) - React Native SQLite
 - [Deno SQLite](https://deno.land/x/sqlite) - Deno SQLite module
 
-## Links
+## 🔗 Links
 
 - [Documentation](https://github.com/cuongdqpayment/dqcai-sqlite/docs)
 - [Examples Repository](https://github.com/cuongdqpayment/dqcai-sqlite)
 - [Issue Tracker](https://github.com/cuongdqpayment/dqcai-sqlite/issues)
-- [Facebook Page](https://www.facebook.com/share/p/19esHGbaGj/)
+- [Issue Facebook](https://www.facebook.com/share/p/19esHGbaGj/)
 - [NPM Package](https://www.npmjs.com/package/@dqcai/sqlite)
 
 ---
 
-🚀 **@dqcai/sqlite** — One library, all platforms! 🎯
+🔥 **@dqcai/sqlite** — One library, all platforms! 🚀

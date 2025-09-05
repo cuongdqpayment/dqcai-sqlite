@@ -614,6 +614,7 @@ export abstract class BaseService<T = any> {
   getStatus(): ServiceStatus {
     return {
       schemaName: this.schemaName,
+      tableName:this.tableName,
       isOpened: this.isOpened,
       isInitialized: this.isInitialized,
       hasDao: !!this.dao,

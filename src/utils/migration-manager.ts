@@ -1,6 +1,6 @@
 // src/utils/migration-manager.ts
-import { UniversalDAO } from '../core/universal-dao';
-import { SQLiteResult, DatabaseSchema, TableDefinition, ColumnDefinition } from '../types';
+import { UniversalDAO } from "../core/universal-dao";
+import { DatabaseSchema, TableDefinition, ColumnDefinition } from "../types";
 
 export interface Migration {
   version: string;
@@ -50,16 +50,19 @@ export interface MigrationOptions {
 export class MigrationManager {
   private dao: UniversalDAO;
   private migrations: Map<string, Migration> = new Map();
-  private migrationTable: string = '_migrations';
-  private schemaVersion: string = '1.0.0';
+  private migrationTable: string = "_migrations";
+  private schemaVersion: string = "1.0.0";
 
-  constructor(dao: UniversalDAO, options?: {
-    migrationTable?: string;
-    schemaVersion?: string;
-  }) {
+  constructor(
+    dao: UniversalDAO,
+    options?: {
+      migrationTable?: string;
+      schemaVersion?: string;
+    }
+  ) {
     this.dao = dao;
-    this.migrationTable = options?.migrationTable || '_migrations';
-    this.schemaVersion = options?.schemaVersion || '1.0.0';
+    this.migrationTable = options?.migrationTable || "_migrations";
+    this.schemaVersion = options?.schemaVersion || "1.0.0";
   }
 
   /**
@@ -83,7 +86,7 @@ export class MigrationManager {
    * Load migrations from a directory or configuration
    */
   loadMigrations(migrations: Record<string, Migration>): void {
-    Object.values(migrations).forEach(migration => {
+    Object.values(migrations).forEach((migration) => {
       this.addMigration(migration);
     });
   }
@@ -99,7 +102,7 @@ export class MigrationManager {
    * Get all registered migrations
    */
   getMigrations(): Migration[] {
-    return Array.from(this.migrations.values()).sort((a, b) => 
+    return Array.from(this.migrations.values()).sort((a, b) =>
       this.compareVersions(a.version, b.version)
     );
   }
@@ -126,7 +129,7 @@ export class MigrationManager {
         schema_version TEXT DEFAULT '${this.schemaVersion}'
       )
     `;
-    
+
     await this.dao.execute(createTableSQL);
 
     // Create index for better query performance
@@ -163,10 +166,10 @@ export class MigrationManager {
    */
   async getPendingMigrations(): Promise<Migration[]> {
     const appliedMigrations = await this.getAppliedMigrations();
-    const appliedVersions = new Set(appliedMigrations.map(m => m.version));
-    
-    return this.getMigrations().filter(migration => 
-      !appliedVersions.has(migration.version)
+    const appliedVersions = new Set(appliedMigrations.map((m) => m.version));
+
+    return this.getMigrations().filter(
+      (migration) => !appliedVersions.has(migration.version)
     );
   }
 
@@ -176,11 +179,12 @@ export class MigrationManager {
   async getDetailedStatus(): Promise<MigrationStatus[]> {
     await this.initMigrationTable();
     const appliedMigrations = await this.getAppliedMigrations();
-    const appliedMap = new Map(appliedMigrations.map(m => [m.version, m]));
+    const appliedMap = new Map(appliedMigrations.map((m) => [m.version, m]));
 
-    return this.getMigrations().map(migration => {
+    return this.getMigrations().map((migration) => {
       const applied = appliedMap.get(migration.version);
-      const { dependenciesMet, missingDependencies } = this.checkDependencies(migration);
+      const { dependenciesMet, missingDependencies } =
+        this.checkDependencies(migration);
 
       return {
         version: migration.version,
@@ -190,7 +194,7 @@ export class MigrationManager {
         applied_at: applied?.applied_at,
         execution_time_ms: applied?.execution_time_ms,
         dependencies_met: dependenciesMet,
-        missing_dependencies: missingDependencies
+        missing_dependencies: missingDependencies,
       };
     });
   }
@@ -198,31 +202,40 @@ export class MigrationManager {
   /**
    * Create a migration plan
    */
-  async createMigrationPlan(targetVersion?: string, direction: 'up' | 'down' = 'up'): Promise<MigrationPlan> {
+  async createMigrationPlan(
+    targetVersion?: string,
+    direction: "up" | "down" = "up"
+  ): Promise<MigrationPlan> {
     const appliedMigrations = await this.getAppliedMigrations();
-    const appliedVersions = new Set(appliedMigrations.map(m => m.version));
+    const appliedVersions = new Set(appliedMigrations.map((m) => m.version));
     const allMigrations = this.getMigrations();
 
     const plan: MigrationPlan = {
       toApply: [],
       toRollback: [],
       conflicts: [],
-      estimatedTime: 0
+      estimatedTime: 0,
     };
 
-    if (direction === 'up') {
+    if (direction === "up") {
       // Forward migration
       for (const migration of allMigrations) {
-        if (targetVersion && this.compareVersions(migration.version, targetVersion) > 0) {
+        if (
+          targetVersion &&
+          this.compareVersions(migration.version, targetVersion) > 0
+        ) {
           break;
         }
-        
+
         if (!appliedVersions.has(migration.version)) {
-          const { dependenciesMet, missingDependencies } = this.checkDependencies(migration);
-          
+          const { dependenciesMet, missingDependencies } =
+            this.checkDependencies(migration);
+
           if (!dependenciesMet) {
             plan.conflicts.push(
-              `Migration ${migration.version} has unmet dependencies: ${missingDependencies.join(', ')}`
+              `Migration ${
+                migration.version
+              } has unmet dependencies: ${missingDependencies.join(", ")}`
             );
           } else {
             plan.toApply.push(migration);
@@ -232,7 +245,11 @@ export class MigrationManager {
     } else {
       // Rollback migration
       const reversedApplied = appliedMigrations
-        .filter(applied => !targetVersion || this.compareVersions(applied.version, targetVersion) > 0)
+        .filter(
+          (applied) =>
+            !targetVersion ||
+            this.compareVersions(applied.version, targetVersion) > 0
+        )
         .sort((a, b) => this.compareVersions(b.version, a.version));
 
       for (const appliedRecord of reversedApplied) {
@@ -252,18 +269,25 @@ export class MigrationManager {
   /**
    * Run migrations up to a target version
    */
-  async migrate(targetVersion?: string, options: MigrationOptions = {}): Promise<MigrationRecord[]> {
+  async migrate(
+    targetVersion?: string,
+    options: MigrationOptions = {}
+  ): Promise<MigrationRecord[]> {
     await this.initMigrationTable();
-    
-    const plan = await this.createMigrationPlan(targetVersion, 'up');
-    
+
+    const plan = await this.createMigrationPlan(targetVersion, "up");
+
     if (plan.conflicts.length > 0) {
-      throw new Error(`Migration conflicts detected:\n${plan.conflicts.join('\n')}`);
+      throw new Error(
+        `Migration conflicts detected:\n${plan.conflicts.join("\n")}`
+      );
     }
 
     if (options.dryRun) {
-      console.log('Dry run - would apply the following migrations:');
-      plan.toApply.forEach(m => console.log(`  - ${m.version}: ${m.description}`));
+      console.log("Dry run - would apply the following migrations:");
+      plan.toApply.forEach((m) =>
+        console.log(`  - ${m.version}: ${m.description}`)
+      );
       return [];
     }
 
@@ -272,17 +296,17 @@ export class MigrationManager {
 
     for (let i = 0; i < plan.toApply.length; i++) {
       const migration = plan.toApply[i];
-      
+
       try {
         options.onProgress?.(i + 1, total, migration);
-        
+
         const result = await this.applyMigration(migration, options);
         results.push(result);
-        
       } catch (error) {
-        const migrationError = error instanceof Error ? error : new Error(String(error));
+        const migrationError =
+          error instanceof Error ? error : new Error(String(error));
         options.onError?.(migrationError, migration);
-        
+
         if (options.stopOnError !== false) {
           throw new Error(
             `Migration ${migration.version} failed: ${migrationError.message}`
@@ -297,14 +321,19 @@ export class MigrationManager {
   /**
    * Rollback migrations to a target version
    */
-  async rollback(targetVersion?: string, options: MigrationOptions = {}): Promise<void> {
+  async rollback(
+    targetVersion?: string,
+    options: MigrationOptions = {}
+  ): Promise<void> {
     await this.initMigrationTable();
-    
-    const plan = await this.createMigrationPlan(targetVersion, 'down');
-    
+
+    const plan = await this.createMigrationPlan(targetVersion, "down");
+
     if (options.dryRun) {
-      console.log('Dry run - would rollback the following migrations:');
-      plan.toRollback.forEach(m => console.log(`  - ${m.version}: ${m.description}`));
+      console.log("Dry run - would rollback the following migrations:");
+      plan.toRollback.forEach((m) =>
+        console.log(`  - ${m.version}: ${m.description}`)
+      );
       return;
     }
 
@@ -312,16 +341,16 @@ export class MigrationManager {
 
     for (let i = 0; i < plan.toRollback.length; i++) {
       const migration = plan.toRollback[i];
-      
+
       try {
         options.onProgress?.(i + 1, total, migration);
-        
+
         await this.rollbackMigration(migration, options);
-        
       } catch (error) {
-        const migrationError = error instanceof Error ? error : new Error(String(error));
+        const migrationError =
+          error instanceof Error ? error : new Error(String(error));
         options.onError?.(migrationError, migration);
-        
+
         if (options.stopOnError !== false) {
           throw new Error(
             `Rollback of migration ${migration.version} failed: ${migrationError.message}`
@@ -334,53 +363,63 @@ export class MigrationManager {
   /**
    * Apply a single migration
    */
-  private async applyMigration(migration: Migration, options: MigrationOptions): Promise<MigrationRecord> {
+  private async applyMigration(
+    migration: Migration,
+    options: MigrationOptions
+  ): Promise<MigrationRecord> {
     const startTime = Date.now();
     const timeout = options.timeout || 30000; // 30 seconds default
 
     await this.dao.beginTransaction();
-    
+
     try {
       // Set timeout for migration execution
       const migrationPromise = migration.up(this.dao);
-      
+
       if (timeout > 0) {
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error(`Migration timeout after ${timeout}ms`)), timeout);
+          setTimeout(
+            () => reject(new Error(`Migration timeout after ${timeout}ms`)),
+            timeout
+          );
         });
-        
+
         await Promise.race([migrationPromise, timeoutPromise]);
       } else {
         await migrationPromise;
       }
-      
+
       const executionTime = Date.now() - startTime;
-      const checksum = options.validateChecksums ? this.generateChecksum(migration) : undefined;
-      
+      const checksum = options.validateChecksums
+        ? this.generateChecksum(migration)
+        : undefined;
+
       // Record migration
-      await this.dao.execute(`
+      await this.dao.execute(
+        `
         INSERT INTO ${this.migrationTable} 
         (version, description, category, execution_time_ms, checksum) 
         VALUES (?, ?, ?, ?, ?)
-      `, [
-        migration.version,
-        migration.description,
-        migration.category || null,
-        executionTime,
-        checksum || null
-      ]);
-      
+      `,
+        [
+          migration.version,
+          migration.description,
+          migration.category || null,
+          executionTime,
+          checksum || null,
+        ]
+      );
+
       await this.dao.commitTransaction();
-      
+
       return {
         version: migration.version,
         description: migration.description,
         category: migration.category,
         applied_at: new Date().toISOString(),
         execution_time_ms: executionTime,
-        checksum
+        checksum,
       };
-      
     } catch (error) {
       await this.dao.rollbackTransaction();
       throw error;
@@ -390,32 +429,40 @@ export class MigrationManager {
   /**
    * Rollback a single migration
    */
-  private async rollbackMigration(migration: Migration, options: MigrationOptions): Promise<void> {
+  private async rollbackMigration(
+    migration: Migration,
+    options: MigrationOptions
+  ): Promise<void> {
     const timeout = options.timeout || 30000;
 
     await this.dao.beginTransaction();
-    
+
     try {
       // Set timeout for migration rollback
       const rollbackPromise = migration.down(this.dao);
-      
+
       if (timeout > 0) {
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error(`Rollback timeout after ${timeout}ms`)), timeout);
+          setTimeout(
+            () => reject(new Error(`Rollback timeout after ${timeout}ms`)),
+            timeout
+          );
         });
-        
+
         await Promise.race([rollbackPromise, timeoutPromise]);
       } else {
         await rollbackPromise;
       }
-      
+
       // Remove migration record
-      await this.dao.execute(`
+      await this.dao.execute(
+        `
         DELETE FROM ${this.migrationTable} WHERE version = ?
-      `, [migration.version]);
-      
+      `,
+        [migration.version]
+      );
+
       await this.dao.commitTransaction();
-      
     } catch (error) {
       await this.dao.rollbackTransaction();
       throw error;
@@ -427,16 +474,19 @@ export class MigrationManager {
    */
   async reset(options: { force?: boolean } = {}): Promise<void> {
     if (!options.force) {
-      throw new Error('Reset requires explicit force option to prevent accidental data loss');
+      throw new Error(
+        "Reset requires explicit force option to prevent accidental data loss"
+      );
     }
 
     await this.dao.beginTransaction();
-    
+
     try {
       // Get all applied migrations in reverse order
       const appliedMigrations = await this.getAppliedMigrations();
-      const reversedMigrations = appliedMigrations
-        .sort((a, b) => this.compareVersions(b.version, a.version));
+      const reversedMigrations = appliedMigrations.sort((a, b) =>
+        this.compareVersions(b.version, a.version)
+      );
 
       // Rollback all migrations
       for (const applied of reversedMigrations) {
@@ -448,9 +498,8 @@ export class MigrationManager {
 
       // Clear migration table
       await this.dao.execute(`DELETE FROM ${this.migrationTable}`);
-      
+
       await this.dao.commitTransaction();
-      
     } catch (error) {
       await this.dao.rollbackTransaction();
       throw error;
@@ -465,42 +514,52 @@ export class MigrationManager {
     issues: string[];
   }> {
     const issues: string[] = [];
-    
+
     try {
       const appliedMigrations = await this.getAppliedMigrations();
-      
+
       for (const applied of appliedMigrations) {
         const migration = this.migrations.get(applied.version);
-        
+
         if (!migration) {
-          issues.push(`Applied migration ${applied.version} not found in registered migrations`);
+          issues.push(
+            `Applied migration ${applied.version} not found in registered migrations`
+          );
           continue;
         }
-        
+
         // Check dependencies
-        const { dependenciesMet, missingDependencies } = this.checkDependencies(migration);
+        const { dependenciesMet, missingDependencies } =
+          this.checkDependencies(migration);
         if (!dependenciesMet) {
-          issues.push(`Migration ${applied.version} has unmet dependencies: ${missingDependencies.join(', ')}`);
+          issues.push(
+            `Migration ${
+              applied.version
+            } has unmet dependencies: ${missingDependencies.join(", ")}`
+          );
         }
-        
+
         // Check checksum if available
         if (applied.checksum) {
           const currentChecksum = this.generateChecksum(migration);
           if (currentChecksum !== applied.checksum) {
-            issues.push(`Migration ${applied.version} has changed since it was applied (checksum mismatch)`);
+            issues.push(
+              `Migration ${applied.version} has changed since it was applied (checksum mismatch)`
+            );
           }
         }
       }
-      
+
       return {
         valid: issues.length === 0,
-        issues
+        issues,
       };
-      
     } catch (error) {
       return {
         valid: false,
-        issues: [`Error validating migration integrity: ${(error as Error).message}`]
+        issues: [
+          `Error validating migration integrity: ${(error as Error).message}`,
+        ],
       };
     }
   }
@@ -519,25 +578,27 @@ export class MigrationManager {
   }> {
     const applied = await this.getAppliedMigrations();
     const pending = await this.getPendingMigrations();
-    
+
     const categories: Record<string, number> = {};
     let totalExecutionTime = 0;
-    
+
     for (const migration of applied) {
       if (migration.category) {
-        categories[migration.category] = (categories[migration.category] || 0) + 1;
+        categories[migration.category] =
+          (categories[migration.category] || 0) + 1;
       }
       totalExecutionTime += migration.execution_time_ms || 0;
     }
-    
+
     return {
       totalMigrations: this.migrations.size,
       appliedMigrations: applied.length,
       pendingMigrations: pending.length,
       categories,
       totalExecutionTime,
-      averageExecutionTime: applied.length > 0 ? totalExecutionTime / applied.length : 0,
-      recentMigrations: applied.slice(-10) // Last 10 migrations
+      averageExecutionTime:
+        applied.length > 0 ? totalExecutionTime / applied.length : 0,
+      recentMigrations: applied.slice(-10), // Last 10 migrations
     };
   }
 
@@ -550,15 +611,18 @@ export class MigrationManager {
     version: string,
     description?: string
   ): Migration {
-    const migrationDescription = description || `Schema update to version ${version}`;
-    
+    const migrationDescription =
+      description || `Schema update to version ${version}`;
+
     return {
       version,
       description: migrationDescription,
       up: async (dao: UniversalDAO) => {
         // This is a simplified implementation
         // In practice, you'd want to do proper schema diffing
-        for (const [tableName, tableConfig] of Object.entries(toSchema.schemas)) {
+        for (const [tableName, tableConfig] of Object.entries(
+          toSchema.schemas
+        )) {
           if (!fromSchema.schemas[tableName]) {
             // New table - create it
             const tableDefinition: TableDefinition = {
@@ -566,44 +630,50 @@ export class MigrationManager {
               cols: tableConfig.cols,
               description: tableConfig.description,
               indexes: tableConfig.indexes,
-              foreign_keys: tableConfig.foreign_keys
+              foreign_keys: tableConfig.foreign_keys,
             };
-            
+
             // This would need to be implemented with proper SQL generation
             // For now, we'll throw an error to indicate this needs custom implementation
-            throw new Error('Automatic schema migration generation not fully implemented. Please create migrations manually.');
+            throw new Error(
+              "Automatic schema migration generation not fully implemented. Please create migrations manually."
+            );
           }
         }
       },
       down: async (dao: UniversalDAO) => {
         // Reverse the changes
-        throw new Error('Automatic rollback generation not fully implemented. Please create rollback manually.');
-      }
+        throw new Error(
+          "Automatic rollback generation not fully implemented. Please create rollback manually."
+        );
+      },
     };
   }
 
   // Private utility methods
 
   private validateMigration(migration: Migration): void {
-    if (!migration.version || typeof migration.version !== 'string') {
-      throw new Error('Migration version is required and must be a string');
+    if (!migration.version || typeof migration.version !== "string") {
+      throw new Error("Migration version is required and must be a string");
     }
-    
-    if (!migration.description || typeof migration.description !== 'string') {
-      throw new Error('Migration description is required and must be a string');
+
+    if (!migration.description || typeof migration.description !== "string") {
+      throw new Error("Migration description is required and must be a string");
     }
-    
-    if (typeof migration.up !== 'function') {
-      throw new Error('Migration up function is required');
+
+    if (typeof migration.up !== "function") {
+      throw new Error("Migration up function is required");
     }
-    
-    if (typeof migration.down !== 'function') {
-      throw new Error('Migration down function is required');
+
+    if (typeof migration.down !== "function") {
+      throw new Error("Migration down function is required");
     }
-    
+
     // Check for duplicate version
     if (this.migrations.has(migration.version)) {
-      throw new Error(`Migration with version ${migration.version} already exists`);
+      throw new Error(
+        `Migration with version ${migration.version} already exists`
+      );
     }
   }
 
@@ -615,29 +685,29 @@ export class MigrationManager {
       return { dependenciesMet: true, missingDependencies: [] };
     }
 
-    const missingDependencies = migration.dependencies.filter(dep => 
-      !this.migrations.has(dep)
+    const missingDependencies = migration.dependencies.filter(
+      (dep) => !this.migrations.has(dep)
     );
 
     return {
       dependenciesMet: missingDependencies.length === 0,
-      missingDependencies
+      missingDependencies,
     };
   }
 
   private compareVersions(version1: string, version2: string): number {
     // Simple semantic version comparison
-    const v1Parts = version1.split('.').map(Number);
-    const v2Parts = version2.split('.').map(Number);
-    
+    const v1Parts = version1.split(".").map(Number);
+    const v2Parts = version2.split(".").map(Number);
+
     for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
       const v1Part = v1Parts[i] || 0;
       const v2Part = v2Parts[i] || 0;
-      
+
       if (v1Part < v2Part) return -1;
       if (v1Part > v2Part) return 1;
     }
-    
+
     return 0;
   }
 
@@ -646,13 +716,13 @@ export class MigrationManager {
     // In production, you might want to use a more sophisticated approach
     const content = migration.up.toString() + migration.down.toString();
     let hash = 0;
-    
+
     for (let i = 0; i < content.length; i++) {
       const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    
+
     return hash.toString(16);
   }
 }
@@ -678,30 +748,30 @@ export const MigrationHelpers = {
       description: options?.description || `Create table ${tableName}`,
       category: options?.category,
       up: async (dao: UniversalDAO) => {
-        const columnDefs = columns.map(col => 
-          `${col.name} ${col.type} ${col.constraints || ''}`.trim()
+        const columnDefs = columns.map((col) =>
+          `${col.name} ${col.type} ${col.constraints || ""}`.trim()
         );
-        
+
         await dao.execute(`
           CREATE TABLE ${tableName} (
-            ${columnDefs.join(',\n    ')}
+            ${columnDefs.join(",\n    ")}
           )
         `);
-        
+
         // Create indexes if specified
         if (options?.indexes) {
           for (const index of options.indexes) {
-            const uniqueStr = index.unique ? 'UNIQUE' : '';
+            const uniqueStr = index.unique ? "UNIQUE" : "";
             await dao.execute(`
               CREATE ${uniqueStr} INDEX ${index.name} 
-              ON ${tableName} (${index.columns.join(', ')})
+              ON ${tableName} (${index.columns.join(", ")})
             `);
           }
         }
       },
       down: async (dao: UniversalDAO) => {
         await dao.execute(`DROP TABLE IF EXISTS ${tableName}`);
-      }
+      },
     };
   },
 
@@ -722,25 +792,28 @@ export const MigrationHelpers = {
   ): Migration {
     return {
       version,
-      description: options?.description || `Add column ${columnName} to ${tableName}`,
+      description:
+        options?.description || `Add column ${columnName} to ${tableName}`,
       category: options?.category,
       up: async (dao: UniversalDAO) => {
         let sql = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`;
-        
+
         if (options?.defaultValue !== undefined) {
           sql += ` DEFAULT ${options.defaultValue}`;
         }
-        
+
         if (options?.nullable === false) {
           sql += ` NOT NULL`;
         }
-        
+
         await dao.execute(sql);
       },
       down: async (dao: UniversalDAO) => {
         // SQLite doesn't support DROP COLUMN directly
-        throw new Error('SQLite does not support dropping columns. Manual rollback required.');
-      }
+        throw new Error(
+          "SQLite does not support dropping columns. Manual rollback required."
+        );
+      },
     };
   },
 
@@ -760,18 +833,19 @@ export const MigrationHelpers = {
   ): Migration {
     return {
       version,
-      description: options?.description || `Add index ${indexName} to ${tableName}`,
+      description:
+        options?.description || `Add index ${indexName} to ${tableName}`,
       category: options?.category,
       up: async (dao: UniversalDAO) => {
-        const uniqueStr = options?.unique ? 'UNIQUE' : '';
+        const uniqueStr = options?.unique ? "UNIQUE" : "";
         await dao.execute(`
           CREATE ${uniqueStr} INDEX ${indexName} 
-          ON ${tableName} (${columns.join(', ')})
+          ON ${tableName} (${columns.join(", ")})
         `);
       },
       down: async (dao: UniversalDAO) => {
         await dao.execute(`DROP INDEX IF EXISTS ${indexName}`);
-      }
+      },
     };
   },
 
@@ -796,7 +870,7 @@ export const MigrationHelpers = {
       },
       down: async (dao: UniversalDAO) => {
         await dao.execute(downSQL);
-      }
+      },
     };
-  }
+  },
 };

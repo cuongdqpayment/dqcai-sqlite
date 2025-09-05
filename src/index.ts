@@ -14,16 +14,7 @@ import {
   DbFactoryOptions,
   ImportOptions,
   ImportResult,
-  ColumnMapping,
-  QueryTable,
-  WhereClause,
-  OrderByClause,
-  TableDefinition,
-  ColumnDefinition,
-  IndexDefinition,
-  ForeignKeyDefinition,
-  TransactionOperation,
-  TypeMappingConfig,
+  ColumnMapping
 } from "./types";
 
 // ========================== CORE EXPORTS ==========================
@@ -31,6 +22,15 @@ export { UniversalDAO } from "./core/universal-dao";
 export { DatabaseFactory } from "./core/database-factory";
 export { DatabaseManager } from "./core/database-manager";
 export { BaseService } from "./core/base-service";
+export {
+  ServiceManager,
+  DefaultService,
+  type ServiceConfig,
+  type ServiceInfo,
+  type HealthReport,
+  type ServiceManagerEvent,
+  type ServiceManagerEventHandler,
+} from "./core/service-manager";
 
 // ========================== QUERY & UTILITIES ==========================
 export { QueryBuilder } from "./query/query-builder";
