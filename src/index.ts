@@ -4,8 +4,6 @@ import { UniversalDAO } from "./core/universal-dao";
 import { BaseService } from "./core/base-service";
 import { DatabaseFactory } from "./core/database-factory";
 import { QueryBuilder } from "./query/query-builder";
-import { MigrationManager } from "./utils/migration-manager";
-import { CSVImporter } from "./utils/csv-import";
 import {
   SQLiteAdapter,
   SQLiteResult,
@@ -34,8 +32,6 @@ export {
 
 // ========================== QUERY & UTILITIES ==========================
 export { QueryBuilder } from "./query/query-builder";
-export { MigrationManager, type Migration } from "./utils/migration-manager";
-export { CSVImporter } from "./utils/csv-import";
 
 // ========================== ADAPTERS ==========================
 export { BaseAdapter } from "./adapters/base-adapter";
@@ -416,50 +412,7 @@ export class UniversalSQLite {
     return await dao.getTableInfo(tableName);
   }
 
-  // ========================== MIGRATION MANAGEMENT ==========================
-
-  /**
-   * Create migration manager for current connection
-   */
-  createMigrationManager(schemaName?: string): MigrationManager {
-    const dao = this.getDAO(schemaName);
-    return new MigrationManager(dao);
-  }
-
-  /**
-   * Run migrations for a database
-   */
-  async runMigrations(
-    migrations: Array<{
-      version: string;
-      description: string;
-      up: (dao: UniversalDAO) => Promise<void>;
-      down: (dao: UniversalDAO) => Promise<void>;
-    }>,
-    schemaName?: string,
-    targetVersion?: string
-  ): Promise<void> {
-    const migrationManager = this.createMigrationManager(schemaName);
-
-    migrations.forEach((migration) => {
-      migrationManager.addMigration(migration);
-    });
-
-    await migrationManager.migrate(targetVersion);
-    this._emit("migrationsCompleted", {
-      schemaName: schemaName || this.currentSchema,
-    });
-  }
-
   // ========================== DATA IMPORT/EXPORT ==========================
-
-  /**
-   * Create CSV importer for current connection
-   */
-  createCSVImporter(schemaName?: string): CSVImporter {
-    const dao = this.getDAO(schemaName);
-    return new CSVImporter(dao);
-  }
 
   /**
    * Import data to a specific table
@@ -549,25 +502,6 @@ export class UniversalSQLite {
       this._emit("error", error as Error, "csvImport");
       throw error;
     }
-  }
-
-  /**
-   * Export table data to CSV
-   */
-  async exportToCSV(
-    tableName: string,
-    schemaName?: string,
-    options?: {
-      columns?: string[];
-      where?: string;
-      orderBy?: string;
-      limit?: number;
-      delimiter?: string;
-      includeHeaders?: boolean;
-    }
-  ): Promise<string> {
-    const importer = this.createCSVImporter(schemaName);
-    return await importer.exportToCSV(tableName, options);
   }
 
   // ========================== ROLE & ACCESS MANAGEMENT ==========================
@@ -903,20 +837,6 @@ export const createBaseService = <T = any>(
       super(schemaName, tableName);
     }
   })();
-};
-
-/**
- * Create migration manager
- */
-export const createMigrationManager = (dao: UniversalDAO): MigrationManager => {
-  return new MigrationManager(dao);
-};
-
-/**
- * Create CSV importer
- */
-export const createCSVImporter = (dao: UniversalDAO): CSVImporter => {
-  return new CSVImporter(dao);
 };
 
 // ========================== CONVENIENCE EXPORTS ==========================
