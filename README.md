@@ -307,6 +307,32 @@ const healthReport = await serviceManager.healthCheck();
 console.log(`System health: ${healthReport.overallHealth ? 'Healthy' : 'Unhealthy'}`);
 ```
 
+### Custom Logger for trace/debug/infor/warn/error versin 3.x.x
+```typescript
+ 
+ import { LoggerConfigBuilder } from '@dqcai/logger';
+ 
+ import {
+    SQLiteLoggerConfig,
+    SQLiteModules,
+    createModuleLogger
+    } from '@dqcai/sqlite';
+
+ const customConfig = new LoggerConfigBuilder()
+    .setEnabled(true) // Turn on logger for all
+    .setDefaultLevel('trace') // Set level default is 'trace'
+    // Config custom logger for each module 
+    .addModule(SQLiteModules.UNIVERSAL_SQLITE, true, ['info', 'warn', 'error'], ['console'])
+    .addModule(SQLiteModules.UNIVERSAL_DAO, true, ['debug', 'info', 'warn', 'error'], ['console'])
+    .build();
+
+// Use this logger config for another module in your code
+
+// Update configuration for logger
+SQLiteLoggerConfig.updateConfiguration(customConfig);
+
+```
+
 ## 🎯 Use Cases
 
 - **Mobile Apps**: React Native applications with offline-first data storage
