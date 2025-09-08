@@ -1,4 +1,4 @@
-// src/types/core.ts
+// src/types.ts
 export interface SQLiteRow {
   [key: string]: any;
 }
@@ -17,6 +17,8 @@ export interface SQLiteConnection {
 export interface SQLiteAdapter {
   connect(path: string): Promise<SQLiteConnection>;
   isSupported(): boolean;
+  name?: string;
+  version?: string;
 }
 
 // Enhanced schema types based on SQLiteDAO
@@ -183,7 +185,7 @@ export interface DbFactoryOptions {
 // Thêm kiểu kiểm tra sức khỏe của Database
 export interface ServiceStatus {
   schemaName: string;
-  tableName:string;
+  tableName: string;
   isOpened: boolean;
   isInitialized: boolean;
   hasDao: boolean;
