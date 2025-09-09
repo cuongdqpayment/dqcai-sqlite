@@ -67,73 +67,75 @@ export class SQLiteLoggerConfig {
   public static proxyInstances: Map<string, LoggerProxy> = new Map();
 
   static createDefaultConfig() {
-    return (
-      new LoggerConfigBuilder()
-        .setEnabled(true)
-        .setDefaultLevel("warn")
-        .addModule(
-          SQLiteModules.UNIVERSAL_SQLITE,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.DATABASE_MANAGER,
-          true,
-          ["debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.DATABASE_FACTORY,
-          true,
-          ["debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.UNIVERSAL_DAO,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.BASE_SERVICE,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.SERVICE_MANAGER,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.QUERY_BUILDER,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.BASE_ADAPTER,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .build()
-    );
+    return new LoggerConfigBuilder()
+      .setEnabled(true)
+      .setDefaultLevel("warn")
+      .addModule(
+        SQLiteModules.UNIVERSAL_SQLITE,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.DATABASE_MANAGER,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.DATABASE_FACTORY,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.UNIVERSAL_DAO,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.BASE_SERVICE,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.SERVICE_MANAGER,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.QUERY_BUILDER,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.BASE_ADAPTER,
+        true,
+        ["warn", "error"],
+        ["console"]
+      )
+      .build();
   }
 
   static initialize(customConfig?: any): UniversalLogger {
     const config = customConfig || SQLiteLoggerConfig.createDefaultConfig();
     SQLiteLoggerConfig.currentConfig = config;
-    
-    if (config.enabled) {
+
+    if (
+      config.enabled &&
+      (config.defaultLevel === "trace" || config.defaultLevel === "debug")
+    ) {
       console.debug(
-        "SQLiteLoggerConfig.initialize()",
-        JSON.stringify(config, null, 2)
+        `SQLiteLoggerConfig.initialize() with ${
+          customConfig ? "CUSTOM" : "default"
+        } config`
       );
     }
-    
+
     SQLiteLoggerConfig.instance = createLogger(config);
     return SQLiteLoggerConfig.instance;
   }
@@ -159,10 +161,10 @@ export class SQLiteLoggerConfig {
         JSON.stringify(newConfig, null, 2)
       );
     }
-    
+
     SQLiteLoggerConfig.currentConfig = newConfig;
     SQLiteLoggerConfig.instance = createLogger(newConfig);
-    
+
     // Log update confirmation
     if (
       newConfig &&
@@ -173,7 +175,9 @@ export class SQLiteLoggerConfig {
     ) {
       console.log(
         "SQLiteLoggerConfig.updateConfiguration() - Configuration updated. Proxy loggers will use new settings automatically.",
-        `Active proxies: ${Array.from(SQLiteLoggerConfig.proxyInstances.keys())}`
+        `Active proxies: ${Array.from(
+          SQLiteLoggerConfig.proxyInstances.keys()
+        )}`
       );
     }
   }
@@ -216,92 +220,73 @@ export class SQLiteLoggerConfig {
   }
 
   static createDebugConfig() {
-    return (
-      new LoggerConfigBuilder()
-        .setEnabled(true)
-        .setDefaultLevel("trace")
-        .addModule(
-          SQLiteModules.UNIVERSAL_SQLITE,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.DATABASE_MANAGER,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.DATABASE_FACTORY,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.UNIVERSAL_DAO,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.BASE_SERVICE,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.SERVICE_MANAGER,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.QUERY_BUILDER,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.BASE_ADAPTER,
-          true,
-          ["trace", "debug", "info", "warn", "error"],
-          ["console"]
-        )
-        .build()
-    );
+    return new LoggerConfigBuilder()
+      .setEnabled(true)
+      .setDefaultLevel("trace")
+      .addModule(
+        SQLiteModules.UNIVERSAL_SQLITE,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.DATABASE_MANAGER,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.DATABASE_FACTORY,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.UNIVERSAL_DAO,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.BASE_SERVICE,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.SERVICE_MANAGER,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.QUERY_BUILDER,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .addModule(
+        SQLiteModules.BASE_ADAPTER,
+        true,
+        ["trace", "debug", "info", "warn", "error"],
+        ["console"]
+      )
+      .build();
   }
 
   static createProductionConfig() {
-    return (
-      new LoggerConfigBuilder()
-        .setEnabled(true)
-        .setDefaultLevel("warn")
-        .addModule(SQLiteModules.UNIVERSAL_SQLITE, true, ["error"], ["console"])
-        .addModule(
-          SQLiteModules.DATABASE_MANAGER,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(
-          SQLiteModules.DATABASE_FACTORY,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .addModule(SQLiteModules.UNIVERSAL_DAO, true, ["error"], ["console"])
-        .addModule(SQLiteModules.BASE_SERVICE, true, ["error"], ["console"])
-        .addModule(SQLiteModules.SERVICE_MANAGER, true, ["error"], ["console"])
-        .addModule(SQLiteModules.QUERY_BUILDER, true, ["error"], ["console"])
-        .addModule(
-          SQLiteModules.BASE_ADAPTER,
-          true,
-          ["warn", "error"],
-          ["console"]
-        )
-        .build()
-    );
+    return new LoggerConfigBuilder()
+      .setEnabled(true)
+      .setDefaultLevel("error")
+      .addModule(SQLiteModules.UNIVERSAL_SQLITE, true, ["error"], ["console"])
+      .addModule(SQLiteModules.DATABASE_MANAGER, true, ["error"], ["console"])
+      .addModule(SQLiteModules.DATABASE_FACTORY, true, ["error"], ["console"])
+      .addModule(SQLiteModules.UNIVERSAL_DAO, true, ["error"], ["console"])
+      .addModule(SQLiteModules.BASE_SERVICE, true, ["error"], ["console"])
+      .addModule(SQLiteModules.SERVICE_MANAGER, true, ["error"], ["console"])
+      .addModule(SQLiteModules.QUERY_BUILDER, true, ["error"], ["console"])
+      .addModule(SQLiteModules.BASE_ADAPTER, true, ["error"], ["console"])
+      .build();
   }
 
   static reset(): UniversalLogger {
@@ -319,7 +304,9 @@ export class SQLiteLoggerConfig {
    * Get current configuration (for debugging)
    */
   static getCurrentConfig(): any {
-    return SQLiteLoggerConfig.currentConfig ? { ...SQLiteLoggerConfig.currentConfig } : null;
+    return SQLiteLoggerConfig.currentConfig
+      ? { ...SQLiteLoggerConfig.currentConfig }
+      : null;
   }
 }
 
@@ -350,32 +337,36 @@ export const LoggerUtils = {
    */
   testDynamicUpdate: (moduleName: string): void => {
     const logger = createModuleLogger(moduleName);
-    
+
     console.log(`\n=== Testing ${moduleName} Logger Dynamic Updates ===`);
-    
+
     // Test with debug config
     console.log("1. Setting debug configuration...");
-    SQLiteLoggerConfig.updateConfiguration(SQLiteLoggerConfig.createDebugConfig());
+    SQLiteLoggerConfig.updateConfiguration(
+      SQLiteLoggerConfig.createDebugConfig()
+    );
     logger.debug("This DEBUG message should be visible");
     logger.info("This INFO message should be visible");
-    
+
     // Test with production config
     console.log("2. Setting production configuration...");
-    SQLiteLoggerConfig.updateConfiguration(SQLiteLoggerConfig.createProductionConfig());
+    SQLiteLoggerConfig.updateConfiguration(
+      SQLiteLoggerConfig.createProductionConfig()
+    );
     logger.debug("This DEBUG message should be HIDDEN");
     logger.info("This INFO message should be HIDDEN");
     logger.error("This ERROR message should be visible");
-    
+
     // Test module disable
     console.log("3. Disabling specific module...");
     SQLiteLoggerConfig.disableModule(moduleName);
     logger.error("This ERROR message should be HIDDEN (module disabled)");
-    
+
     // Test module re-enable
     console.log("4. Re-enabling specific module...");
     SQLiteLoggerConfig.enableModule(moduleName);
     logger.error("This ERROR message should be visible again");
-    
+
     console.log(`=== End test for ${moduleName} ===\n`);
   },
 
@@ -384,10 +375,20 @@ export const LoggerUtils = {
    */
   showStats: (): void => {
     console.log("\n=== Logger Statistics ===");
-    console.log(`Active proxy modules: ${SQLiteLoggerConfig.getActiveProxyModules().length}`);
+    console.log(
+      `Active proxy modules: ${
+        SQLiteLoggerConfig.getActiveProxyModules().length
+      }`
+    );
     console.log(`Proxy modules:`, SQLiteLoggerConfig.getActiveProxyModules());
-    console.log(`Current config enabled:`, SQLiteLoggerConfig.getCurrentConfig()?.enabled);
-    console.log(`Current default level:`, SQLiteLoggerConfig.getCurrentConfig()?.defaultLevel);
+    console.log(
+      `Current config enabled:`,
+      SQLiteLoggerConfig.getCurrentConfig()?.enabled
+    );
+    console.log(
+      `Current default level:`,
+      SQLiteLoggerConfig.getCurrentConfig()?.defaultLevel
+    );
     console.log("========================\n");
-  }
+  },
 };
