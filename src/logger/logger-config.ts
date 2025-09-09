@@ -47,8 +47,8 @@ export class SQLiteLoggerConfig {
   static createDefaultConfig() {
     return (
       new LoggerConfigBuilder()
-        .setEnabled(false) // Default: disabled for production
-        .setDefaultLevel("trace") // Default level
+        .setEnabled(true) // Default: disabled for production
+        .setDefaultLevel("warn") // Default level
 
         // Core modules - usually important
         .addModule(
@@ -73,36 +73,36 @@ export class SQLiteLoggerConfig {
         // DAO and Services - detailed debugging
         .addModule(
           SQLiteModules.UNIVERSAL_DAO,
-          false,
+          true,
           ["warn", "error"],
           ["console"]
         )
         .addModule(
           SQLiteModules.BASE_SERVICE,
-          false,
-          ["trace", "debug", "info", "warn", "error"],
+          true,
+          ["warn", "error"],
           ["console"]
         )
         .addModule(
           SQLiteModules.SERVICE_MANAGER,
-          false,
-          ["info", "warn", "error"],
+          true,
+          ["warn", "error"],
           ["console"]
         )
 
         // Query building - can be verbose
         .addModule(
           SQLiteModules.QUERY_BUILDER,
-          false,
-          ["debug", "info", "warn", "error"],
+          true,
+          ["warn", "error"],
           ["console"]
         )
 
         // Adapters - platform specific
         .addModule(
           SQLiteModules.BASE_ADAPTER,
-          false,
-          ["debug", "info", "warn", "error"],
+          true,
+          ["warn", "error"],
           ["console"]
         )
 
@@ -116,10 +116,7 @@ export class SQLiteLoggerConfig {
   static initialize(customConfig?: any): UniversalLogger {
     const config = customConfig || SQLiteLoggerConfig.createDefaultConfig();
     SQLiteLoggerConfig.currentConfig = config;
-    if (
-      config.enabled &&
-      (config.defaultLevel === "trace" || config.defaultLevel === "debug")
-    ) {
+    if (config.enabled) {
       console.debug(
         "SQLiteLoggerConfig.initialize()",
         JSON.stringify(config, null, 2)
