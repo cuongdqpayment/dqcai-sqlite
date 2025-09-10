@@ -65,7 +65,7 @@ export class UniversalDAO {
     } catch (error) {
       this.logger.error("Failed to connect to database", {
         dbPath: this.dbPath,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -82,7 +82,7 @@ export class UniversalDAO {
         this.logger.info("Successfully disconnected from database");
       } catch (error) {
         this.logger.error("Error during database disconnection", {
-          error: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error.message : error,
         });
         throw error;
       }
@@ -233,7 +233,7 @@ export class UniversalDAO {
       }
     } catch (error) {
       this.logger.debug(
-        "No existing schema found or schema info table missing"
+        "The first time for init from Schema! No existing schema detected"
       );
       hasExistingSchema = false;
     }
@@ -265,7 +265,7 @@ export class UniversalDAO {
       await this.execute("PRAGMA foreign_keys = ON");
     } catch (error) {
       this.logger.warn("Failed to enable foreign key constraints", {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
     }
 
@@ -311,7 +311,7 @@ export class UniversalDAO {
       this.logger.error(
         "Schema initialization failed, rolling back transaction",
         {
-          error: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error.message : error,
         }
       );
       await this.rollbackTransaction();
@@ -341,7 +341,7 @@ export class UniversalDAO {
       this.logger.info("All tables dropped successfully");
     } catch (error) {
       this.logger.error("Failed to drop tables, rolling back", {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       await this.rollbackTransaction();
       throw error;
@@ -387,7 +387,7 @@ export class UniversalDAO {
       this.logger.error("Failed to create table", {
         tableName: table.name,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -422,7 +422,7 @@ export class UniversalDAO {
           indexName: index.name,
           tableName,
           sql,
-          error: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error.message : error,
         });
         throw error;
       }
@@ -445,7 +445,7 @@ export class UniversalDAO {
       this.logger.debug("Transaction started successfully");
     } catch (error) {
       this.logger.error("Failed to begin transaction", {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -466,7 +466,7 @@ export class UniversalDAO {
       this.logger.debug("Transaction committed successfully");
     } catch (error) {
       this.logger.error("Failed to commit transaction", {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -489,7 +489,7 @@ export class UniversalDAO {
       this.logger.debug("Transaction rolled back successfully");
     } catch (error) {
       this.logger.error("Failed to rollback transaction", {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -529,7 +529,7 @@ export class UniversalDAO {
     } catch (error) {
       this.logger.error("Failed to set schema version", {
         version,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -580,7 +580,7 @@ export class UniversalDAO {
       this.logger.error("Insert operation failed", {
         tableName: insertTable.name,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -644,7 +644,7 @@ export class UniversalDAO {
       this.logger.error("Update operation failed", {
         tableName: updateTable.name,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -686,7 +686,7 @@ export class UniversalDAO {
       this.logger.error("Delete operation failed", {
         tableName: deleteTable.name,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -716,7 +716,7 @@ export class UniversalDAO {
       this.logger.error("Select single operation failed", {
         tableName: selectTable.name,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -745,7 +745,7 @@ export class UniversalDAO {
       this.logger.error("Select all operation failed", {
         tableName: selectTable.name,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -933,7 +933,7 @@ export class UniversalDAO {
             this.logger.warn("Row import failed", {
               rowIndex,
               tableName: options.tableName,
-              error: error instanceof Error ? error.message : String(error),
+              error: error instanceof Error ? error.message : error,
             });
 
             if (options.onError) {
@@ -971,7 +971,7 @@ export class UniversalDAO {
       this.logger.error("Import operation failed, rolling back transaction", {
         tableName: options.tableName,
         processedCount,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       await this.rollbackTransaction();
       throw error;
@@ -1016,7 +1016,7 @@ export class UniversalDAO {
                 rowIndex: index,
                 sourceColumn: mapping.sourceColumn,
                 targetColumn: mapping.targetColumn,
-                error: error instanceof Error ? error.message : String(error),
+                error: error instanceof Error ? error.message : error,
               });
             }
           }
@@ -1174,7 +1174,7 @@ export class UniversalDAO {
             columnName,
             value,
             columnType: columnInfo.type,
-            error: error instanceof Error ? error.message : String(error),
+            error: error instanceof Error ? error.message : error,
           });
           throw error;
         }
@@ -1223,7 +1223,7 @@ export class UniversalDAO {
             columnName: key,
             value,
             columnType: columnInfo.type,
-            error: error instanceof Error ? error.message : String(error),
+            error: error instanceof Error ? error.message : error,
           });
           // Continue processing other columns
         }
@@ -1341,7 +1341,7 @@ export class UniversalDAO {
       this.logger.trace("Insert row failed", {
         tableName,
         columns,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -1409,7 +1409,7 @@ export class UniversalDAO {
       this.logger.error("Update by columns failed", {
         tableName,
         sql,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -1449,7 +1449,7 @@ export class UniversalDAO {
       return info;
     } catch (error) {
       this.logger.error("Failed to get database information", {
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -1468,7 +1468,7 @@ export class UniversalDAO {
     } catch (error) {
       this.logger.error("Failed to get table information", {
         tableName,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -1485,7 +1485,7 @@ export class UniversalDAO {
     } catch (error) {
       this.logger.error("Failed to drop table", {
         tableName,
-        error: error instanceof Error ? error.message : String(error),
+        error: error instanceof Error ? error.message : error,
       });
       throw error;
     }
@@ -1524,7 +1524,7 @@ export class UniversalDAO {
       this.logger.error("SQL query execution failed", {
         sql: sql.substring(0, 200) + (sql.length > 200 ? "..." : ""),
         paramCount: params.length,
-        error: error instanceof Error ? error.message : String(error),
+        error, // trả về nguyên trạng lỗi thay vì ghi là [object Object]
       });
       throw error;
     }

@@ -234,10 +234,31 @@ export class ServiceManager {
       schemaName: config.schemaName,
       tableName: config.tableName,
       serviceClassName: config.serviceClass?.name || "DefaultService",
+      serviceClass: config.serviceClass, // Thêm dòng này
+      isDefaultService: config.serviceClass === DefaultService,
     });
 
     const ServiceClass = config.serviceClass || DefaultService;
-    const service = new ServiceClass(config.schemaName, config.tableName);
+
+    // Thêm validation
+    if (!ServiceClass) {
+      logger.error("ServiceClass is undefined", { config });
+      throw new Error("ServiceClass is undefined");
+    }
+
+    logger.debug("About to instantiate service", {
+      ServiceClassConstructor: ServiceClass,
+      ServiceClassName: ServiceClass.name,
+    });
+
+    const service: any = new ServiceClass(config.schemaName, config.tableName);
+
+    // Verify instance type
+    logger.debug("Service instance created", {
+      serviceConstructor: service.constructor.name,
+      servicePrototype: Object.getPrototypeOf(service).constructor.name,
+      hasFindByStoreId: typeof service.findByStoreId === "function",
+    });
 
     if (config.primaryKeyFields) {
       logger.trace("Setting primary key fields", {

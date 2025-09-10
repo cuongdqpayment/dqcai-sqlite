@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-key="page_title">Kiến trúc thư viện @dqcai/sqlite</title>
+    <link rel="icon" type="image/svg+xml" href="https://mypos.ddns.net/favicon.svg">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .language-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 10px 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .language-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .lang-button {
+            padding: 8px 12px;
+            border: 2px solid transparent;
+            border-radius: 15px;
+            background: transparent;
+            color: #495057;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+
+        .lang-button:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .lang-button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .lang-flag {
+            width: 20px;
+            height: 15px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .flag-vi {
+            background: #da020e;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flag-vi::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background: #ffff00;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            transform: translate(-50%, -50%);
+        }
+
+        .flag-en {
+            background: linear-gradient(to bottom, #012169 0%, #012169 20%, white 20%, white 40%, #c8102e 40%, #c8102e 60%, white 60%, white 80%, #012169 80%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin-top: 60px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .architecture-diagram {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .layer {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .layer:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+        }
+
+        .layer-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #007bff;
+            position: relative;
+        }
+
+        .component {
+            background: #ffffff;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .component:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+        }
+
+        .component-name {
+            font-weight: bold;
+            color: #212529;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .component-desc {
+            color: #6c757d;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .methods {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+        }
+
+        .methods-title {
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .method-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .method-list li {
+            padding: 5px 0;
+            color: #495057;
+            font-size: 0.9em;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .method-list li:last-child {
+            border-bottom: none;
+        }
+
+        .method-list li:before {
+            content: "▶";
+            color: #007bff;
+            margin-right: 8px;
+        }
+
+        .connection-line {
+            position: absolute;
+            background: #007bff;
+            z-index: 10;
+        }
+
+        .user-layer {
+            grid-column: 1 / -1;
+            background: linear-gradient(145deg, #e3f2fd, #bbdefb);
+            border: 2px solid #2196f3;
+        }
+
+        .user-layer .layer-title {
+            color: #1976d2;
+            border-bottom-color: #2196f3;
+        }
+
+        .core-layer {
+            background: linear-gradient(145deg, #fff3e0, #ffcc02);
+            border: 2px solid #ff9800;
+        }
+
+        .core-layer .layer-title {
+            color: #e65100;
+            border-bottom-color: #ff9800;
+        }
+
+        .adapter-layer {
+            background: linear-gradient(145deg, #f3e5f5, #e1bee7);
+            border: 2px solid #9c27b0;
+        }
+
+        .adapter-layer .layer-title {
+            color: #6a1b9a;
+            border-bottom-color: #9c27b0;
+        }
+
+        .flow-diagram {
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            border: 2px solid #dee2e6;
+        }
+
+        .flow-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #495057;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .flow-step {
+            background: #ffffff;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .flow-step:hover {
+            background: #007bff;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .flow-step:not(:last-child)::after {
+            content: "→";
+            position: absolute;
+            right: -25px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #28a745;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.1);
+        }
+
+        .feature-title {
+            color: #28a745;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .feature-desc {
+            color: #6c757d;
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+
+        @media (max-width: 768px) {
+            .architecture-diagram {
+                grid-template-columns: 1fr;
+            }
+
+            .flow-steps {
+                flex-direction: column;
+            }
+
+            .flow-step:not(:last-child)::after {
+                content: "↓";
+                right: 50%;
+                top: 100%;
+                transform: translateX(50%);
+            }
+
+            .language-toggle {
+                position: static;
+                margin: 0 0 20px auto;
+                width: fit-content;
+            }
+
+            .container {
+                margin-top: 20px;
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(145deg, #fff59d, #ffeb3b);
+            border-color: #fbc02d !important;
+        }
+
+        .code-snippet {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="language-toggle">
+        <button class="lang-button active" data-lang="en">
+            <span class="lang-flag flag-en"></span>
+            English
+        </button>
+        <button class="lang-button" data-lang="vi">
+            <span class="lang-flag flag-vi"></span>
+            Tiếng Việt
+        </button>
+    </div>
+
+    <div class="container">
+        <h1 data-key="main_title">🏗️ Kiến trúc thư viện @dqcai/sqlite</h1>
+
+        <div class="architecture-diagram">
+            <!-- User Layer -->
+            <div class="layer user-layer">
+                <div class="layer-title" data-key="user_layer_title">🧑‍💻 Lớp người dùng (User Layer)</div>
+
+                <div class="component">
+                    <div class="component-name">Custom Adapter</div>
+                    <div class="component-desc" data-key="custom_adapter_desc">Người dùng tự thiết kế adapter cho môi
+                        trường cụ thể</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="interface_required">Interface yêu cầu:</div>
+                        <ul class="method-list">
+                            <li>connect(path: string): Promise&lt;SQLiteConnection&gt;</li>
+                            <li>isSupported(): boolean</li>
+                            <li>name?: string</li>
+                            <li>version?: string</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="component">
+                    <div class="component-name">Database Schema</div>
+                    <div class="component-desc" data-key="db_schema_desc">Cấu hình cấu trúc cơ sở dữ liệu theo định dạng
+                        JSON</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="main_properties">Thuộc tính chính:</div>
+                        <ul class="method-list">
+                            <li>database_name: string</li>
+                            <li>version: string</li>
+                            <li>schemas: Record&lt;string, TableDefinition&gt;</li>
+                            <li>type_mapping?: TypeMappingConfig</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="component">
+                    <div class="component-name">Custom Services</div>
+                    <div class="component-desc" data-key="custom_services_desc">Services kế thừa từ BaseService cho
+                        logic nghiệp vụ cụ thể</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="implementation_example">Ví dụ implementation:</div>
+                        <div class="code-snippet">class UserService extends BaseService {
+                            constructor() {
+                            super('core', 'users');
+                            }
+                            }</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Layer -->
+            <div class="layer">
+                <div class="layer-title" data-key="service_layer_title">🔧 Lớp dịch vụ (Service Layer)</div>
+
+                <div class="component highlight">
+                    <div class="component-name">ServiceManager</div>
+                    <div class="component-desc" data-key="service_manager_desc">Quản lý vòng đời các service instances
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="main_methods">Phương thức chính:</div>
+                        <ul class="method-list">
+                            <li>registerService(config: ServiceConfig)</li>
+                            <li>getService(schema: string, table: string)</li>
+                            <li>destroyService(schema: string, table: string)</li>
+                            <li>healthCheck(): Promise&lt;HealthReport&gt;</li>
+                            <li>executeSchemaTransaction(callback)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="component highlight">
+                    <div class="component-name">BaseService</div>
+                    <div class="component-desc" data-key="base_service_desc">Lớp cơ sở cung cấp CRUD operations và
+                        database management</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="crud_methods">Phương thức CRUD:</div>
+                        <ul class="method-list">
+                            <li>create(data: Partial&lt;T&gt;): Promise&lt;T | null&gt;</li>
+                            <li>update(id: any, data: Partial&lt;T&gt;): Promise&lt;T | null&gt;</li>
+                            <li>delete(id: any): Promise&lt;boolean&gt;</li>
+                            <li>findById(id: any): Promise&lt;T | null&gt;</li>
+                            <li>findAll(conditions, options): Promise&lt;T[]&gt;</li>
+                            <li>count(where?): Promise&lt;number&gt;</li>
+                            <li>exists(id: any): Promise&lt;boolean&gt;</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="advanced_methods">Phương thức nâng cao:</div>
+                        <ul class="method-list">
+                            <li>bulkInsert(items: Partial&lt;T&gt;[])</li>
+                            <li>bulkCreate(dataArray: Record&lt;string, any&gt;[])</li>
+                            <li>executeTransaction(callback)</li>
+                            <li>importFromCSV(csvData, options)</li>
+                            <li>importDataWithMapping(data, mappings)</li>
+                            <li>truncate(): Promise&lt;void&gt;</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Management Layer -->
+            <div class="layer">
+                <div class="layer-title" data-key="management_layer_title">⚙️ Lớp quản lý (Management Layer)</div>
+
+                <div class="component highlight">
+                    <div class="component-name">DatabaseManager</div>
+                    <div class="component-desc" data-key="db_manager_desc">Quản lý kết nối và cấu hình đa database</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="connection_management">Quản lý kết nối:</div>
+                        <ul class="method-list">
+                            <li>get(key: string): UniversalDAO</li>
+                            <li>getLazyLoading(key: string)</li>
+                            <li>ensureDatabaseConnection(key: string)</li>
+                            <li>closeConnection(dbKey: string)</li>
+                            <li>closeAll(): Promise&lt;void&gt;</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="schema_management">Quản lý schema:</div>
+                        <ul class="method-list">
+                            <li>registerSchema(key: string, schema: DatabaseSchema)</li>
+                            <li>registerSchemas(schemas: Record&lt;string, DatabaseSchema&gt;)</li>
+                            <li>getAvailableSchemas(): string[]</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="import_export">Import/Export:</div>
+                        <ul class="method-list">
+                            <li>importDataToTable(dbKey, tableName, data)</li>
+                            <li>importDataWithMapping(dbKey, tableName, data, mappings)</li>
+                            <li>importFromCSV(dbKey, tableName, csvData)</li>
+                            <li>bulkImport(importConfigs): Promise&lt;BulkImportResult&gt;</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="component highlight">
+                    <div class="component-name">DatabaseFactory</div>
+                    <div class="component-desc" data-key="db_factory_desc">Factory pattern để tạo và cấu hình
+                        UniversalDAO instances</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="factory_methods">Factory methods:</div>
+                        <ul class="method-list">
+                            <li>createDAO(dbPath: string, options?)</li>
+                            <li>create(options: DbFactoryOptions)</li>
+                            <li>createOrOpen(options, isForceInit?)</li>
+                            <li>openExisting(dbName: string, options?)</li>
+                            <li>createFromAsset(configAsset, options?)</li>
+                            <li>createFromConfig(config, options?)</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="adapter_management">Adapter management:</div>
+                        <ul class="method-list">
+                            <li>registerAdapter(adapter: SQLiteAdapter)</li>
+                            <li>getEnvironmentInfo(): string</li>
+                            <li>detectBestAdapter(): SQLiteAdapter</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Core Layer -->
+            <div class="layer core-layer">
+                <div class="layer-title" data-key="core_layer_title">💾 Lớp lõi (Core Layer)</div>
+
+                <div class="component">
+                    <div class="component-name">UniversalDAO</div>
+                    <div class="component-desc" data-key="universal_dao_desc">Lớp truy cập dữ liệu chính, giao tiếp với
+                        adapter</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="database_operations">Database operations:</div>
+                        <ul class="method-list">
+                            <li>connect(): Promise&lt;void&gt;</li>
+                            <li>disconnect(): Promise&lt;void&gt;</li>
+                            <li>execute(sql: string, params?): Promise&lt;SQLiteResult&gt;</li>
+                            <li>isConnectionOpen(): boolean</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="crud_operations">CRUD operations:</div>
+                        <ul class="method-list">
+                            <li>insert(queryTable: QueryTable): Promise&lt;SQLiteResult&gt;</li>
+                            <li>update(queryTable: QueryTable): Promise&lt;SQLiteResult&gt;</li>
+                            <li>delete(queryTable: QueryTable): Promise&lt;SQLiteResult&gt;</li>
+                            <li>select(queryTable: QueryTable): Promise&lt;any&gt;</li>
+                            <li>selectAll(queryTable: QueryTable): Promise&lt;any[]&gt;</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="schema_management2">Schema management:</div>
+                        <ul class="method-list">
+                            <li>initializeFromSchema(schema: DatabaseSchema)</li>
+                            <li>getDatabaseInfo(): Promise&lt;any&gt;</li>
+                            <li>getTableInfo(tableName: string): Promise&lt;any[]&gt;</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="transaction_support">Transaction support:</div>
+                        <ul class="method-list">
+                            <li>beginTransaction(): Promise&lt;void&gt;</li>
+                            <li>commitTransaction(): Promise&lt;void&gt;</li>
+                            <li>rollbackTransaction(): Promise&lt;void&gt;</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="import_export2">Import/Export:</div>
+                        <ul class="method-list">
+                            <li>importData(options: ImportOptions): Promise&lt;ImportResult&gt;</li>
+                            <li>importFromCSV(tableName, csvData, options)</li>
+                            <li>importDataWithMapping(tableName, data, mappings)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adapter Layer -->
+            <div class="layer adapter-layer">
+                <div class="layer-title" data-key="adapter_layer_title">🔌 Lớp adapter (Adapter Layer)</div>
+
+                <div class="component">
+                    <div class="component-name">SQLiteAdapter Interface</div>
+                    <div class="component-desc" data-key="adapter_interface_desc">Interface chuẩn cho các adapter kết
+                        nối SQLite</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="required_methods">Required methods:</div>
+                        <ul class="method-list">
+                            <li>connect(path: string): Promise&lt;SQLiteConnection&gt;</li>
+                            <li>isSupported(): boolean</li>
+                        </ul>
+                    </div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="optional_properties">Optional properties:</div>
+                        <ul class="method-list">
+                            <li>name?: string</li>
+                            <li>version?: string</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="component">
+                    <div class="component-name">SQLiteConnection</div>
+                    <div class="component-desc" data-key="sqlite_connection_desc">Interface cho connection thực tế đến
+                        database</div>
+                    <div class="methods">
+                        <div class="methods-title" data-key="connection_methods">Connection methods:</div>
+                        <ul class="method-list">
+                            <li>execute(sql: string, params?): Promise&lt;SQLiteResult&gt;</li>
+                            <li>close(): Promise&lt;void&gt;</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flow-diagram">
+            <div class="flow-title" data-key="usage_flow_title">📋 Quy trình sử dụng thư viện</div>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <strong data-key="step1_title">1. Thiết kế</strong><br>
+                    <span data-key="step1_desc">Adapter & Schema</span>
+                </div>
+                <div class="flow-step">
+                    <strong data-key="step2_title">2. Đăng ký</strong><br>
+                    <span data-key="step2_desc">Adapter & Schema</span>
+                </div>
+                <div class="flow-step">
+                    <strong data-key="step3_title">3. Tạo</strong><br>
+                    <span data-key="step3_desc">Custom Services</span>
+                </div>
+                <div class="flow-step">
+                    <strong data-key="step4_title">4. Sử dụng</strong><br>
+                    <span data-key="step4_desc">CRUD Operations</span>
+                </div>
+                <div class="flow-step">
+                    <strong data-key="step5_title">5. Quản lý</strong><br>
+                    <span data-key="step5_desc">Lifecycle & Health</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-title" data-key="feature1_title">🌍 Đa nền tảng</div>
+                <div class="feature-desc" data-key="feature1_desc">Hỗ trợ Node.js, Browser, React Native, Deno, Bun với
+                    adapter pattern linh hoạt</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title" data-key="feature2_title">🔄 ORM hoàn chỉnh</div>
+                <div class="feature-desc" data-key="feature2_desc">Cung cấp đầy đủ các tính năng ORM: CRUD, Transaction,
+                    Bulk operations, Import/Export</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title" data-key="feature3_title">📊 Schema-driven</div>
+                <div class="feature-desc" data-key="feature3_desc">Quản lý cấu trúc database thông qua JSON schema với
+                    type mapping và validation</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title" data-key="feature4_title">🚀 Hiệu suất cao</div>
+                <div class="feature-desc" data-key="feature4_desc">Connection pooling, lazy loading, transaction support
+                    và batch operations</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title" data-key="feature5_title">🔧 Dễ mở rộng</div>
+                <div class="feature-desc" data-key="feature5_desc">Service pattern cho logic nghiệp vụ, event system và
+                    lifecycle management</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-title" data-key="feature6_title">📈 Monitoring</div>
+                <div class="feature-desc" data-key="feature6_desc">Health check, logging system và error handling tích
+                    hợp sẵn</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Đối tượng chứa tất cả các bản dịch
+        const translations = {
+            en: {
+                main_title: "🏗️ Architecture of the @dqcai/sqlite library",
+                user_layer_title: "🧑‍💻 User Layer",
+                custom_adapter_desc: "Users design custom adapters for specific environments",
+                interface_required: "Required Interface:",
+                db_schema_desc: "Configure database structure in JSON format",
+                main_properties: "Main Properties:",
+                custom_services_desc: "Services inherited from BaseService for specific business logic",
+                implementation_example: "Implementation example:",
+                service_layer_title: "🔧 Service Layer",
+                service_manager_desc: "Manage lifecycle of service instances",
+                main_methods: "Main Methods:",
+                base_service_desc: "Base class providing CRUD operations and database management",
+                crud_methods: "CRUD Methods:",
+                advanced_methods: "Advanced Methods:",
+                management_layer_title: "⚙️ Management Layer",
+                db_manager_desc: "Manage connections and multi-database configurations",
+                connection_management: "Connection Management:",
+                schema_management: "Schema Management:",
+                import_export: "Import/Export:",
+                db_factory_desc: "Factory pattern to create and configure UniversalDAO instances",
+                factory_methods: "Factory methods:",
+                adapter_management: "Adapter management:",
+                core_layer_title: "💾 Core Layer",
+                universal_dao_desc: "Main data access class, communicating with adapter",
+                database_operations: "Database operations:",
+                crud_operations: "CRUD operations:",
+                schema_management2: "Schema management:",
+                transaction_support: "Transaction support:",
+                import_export2: "Import/Export:",
+                adapter_layer_title: "🔌 Adapter Layer",
+                adapter_interface_desc: "Standard interface for SQLite connection adapters",
+                required_methods: "Required methods:",
+                optional_properties: "Optional properties:",
+                sqlite_connection_desc: "Interface for actual database connection",
+                connection_methods: "Connection methods:",
+                usage_flow_title: "📋 Library Usage Process",
+                step1_title: "1. Design",
+                step1_desc: "Adapter & Schema",
+                step2_title: "2. Register",
+                step2_desc: "Adapter & Schema",
+                step3_title: "3. Create",
+                step3_desc: "Custom Services",
+                step4_title: "4. Use",
+                step4_desc: "CRUD Operations",
+                step5_title: "5. Manage",
+                step5_desc: "Lifecycle & Health",
+                feature1_title: "🌍 Multi-platform",
+                feature1_desc: "Supports Node.js, Browser, React Native, Deno, Bun with flexible adapter pattern",
+                feature2_title: "🔄 Complete ORM",
+                feature2_desc: "Provides full ORM features: CRUD, Transaction, Bulk operations, Import/Export",
+                feature3_title: "📊 Schema-driven",
+                feature3_desc: "Manage database structure via JSON schema with type mapping and validation",
+                feature4_title: "🚀 High Performance",
+                feature4_desc: "Connection pooling, lazy loading, transaction support and batch operations",
+                feature5_title: "🔧 Easy to Extend",
+                feature5_desc: "Service pattern for business logic, event system and lifecycle management",
+                feature6_title: "📈 Monitoring",
+                feature6_desc: "Built-in health check, logging system and error handling"
+            },
+            vi: {
+                main_title: "🏗️ Kiến trúc thư viện @dqcai/sqlite",
+                user_layer_title: "🧑‍💻 Lớp người dùng (User Layer)",
+                custom_adapter_desc: "Người dùng tự thiết kế adapter cho môi trường cụ thể",
+                interface_required: "Interface yêu cầu:",
+                db_schema_desc: "Cấu hình cấu trúc cơ sở dữ liệu theo định dạng JSON",
+                main_properties: "Thuộc tính chính:",
+                custom_services_desc: "Services kế thừa từ BaseService cho logic nghiệp vụ cụ thể",
+                implementation_example: "Ví dụ implementation:",
+                service_layer_title: "🔧 Lớp dịch vụ (Service Layer)",
+                service_manager_desc: "Quản lý vòng đời các service instances",
+                main_methods: "Phương thức chính:",
+                base_service_desc: "Lớp cơ sở cung cấp CRUD operations và database management",
+                crud_methods: "Phương thức CRUD:",
+                advanced_methods: "Phương thức nâng cao:",
+                management_layer_title: "⚙️ Lớp quản lý (Management Layer)",
+                db_manager_desc: "Quản lý kết nối và cấu hình đa database",
+                connection_management: "Quản lý kết nối:",
+                schema_management: "Quản lý schema:",
+                import_export: "Import/Export:",
+                db_factory_desc: "Factory pattern để tạo và cấu hình UniversalDAO instances",
+                factory_methods: "Factory methods:",
+                adapter_management: "Adapter management:",
+                core_layer_title: "💾 Lớp lõi (Core Layer)",
+                universal_dao_desc: "Lớp truy cập dữ liệu chính, giao tiếp với adapter",
+                database_operations: "Database operations:",
+                crud_operations: "CRUD operations:",
+                schema_management2: "Schema management:",
+                transaction_support: "Transaction support:",
+                import_export2: "Import/Export:",
+                adapter_layer_title: "🔌 Lớp adapter (Adapter Layer)",
+                adapter_interface_desc: "Interface chuẩn cho các adapter kết nối SQLite",
+                required_methods: "Required methods:",
+                optional_properties: "Optional properties:",
+                sqlite_connection_desc: "Interface cho connection thực tế đến database",
+                connection_methods: "Connection methods:",
+                usage_flow_title: "📋 Quy trình sử dụng thư viện",
+                step1_title: "1. Thiết kế",
+                step1_desc: "Adapter & Schema",
+                step2_title: "2. Đăng ký",
+                step2_desc: "Adapter & Schema",
+                step3_title: "3. Tạo",
+                step3_desc: "Custom Services",
+                step4_title: "4. Sử dụng",
+                step4_desc: "CRUD Operations",
+                step5_title: "5. Quản lý",
+                step5_desc: "Lifecycle & Health",
+                feature1_title: "🌍 Đa nền tảng",
+                feature1_desc: "Hỗ trợ Node.js, Browser, React Native, Deno, Bun với adapter pattern linh hoạt",
+                feature2_title: "🔄 ORM hoàn chỉnh",
+                feature2_desc: "Cung cấp đầy đủ các tính năng ORM: CRUD, Transaction, Bulk operations, Import/Export",
+                feature3_title: "📊 Schema-driven",
+                feature3_desc: "Quản lý cấu trúc database thông qua JSON schema với type mapping và validation",
+                feature4_title: "🚀 Hiệu suất cao",
+                feature4_desc: "Connection pooling, lazy loading, transaction support và batch operations",
+                feature5_title: "🔧 Dễ mở rộng",
+                feature5_desc: "Service pattern cho logic nghiệp vụ, event system và lifecycle management",
+                feature6_title: "📈 Monitoring",
+                feature6_desc: "Health check, logging system và error handling tích hợp sẵn"
+            }
+        }
+
+
+        // Lấy các nút ngôn ngữ
+        const langButtons = document.querySelectorAll('.lang-button');
+        let currentLang = 'en'; // Ngôn ngữ mặc định
+
+        // Hàm render nội dung theo ngôn ngữ
+        function renderLanguage(lang) {
+            currentLang = lang;
+            // Cập nhật tiêu đề
+            document.querySelector('h1').textContent = translations[lang].title;
+
+            // Cập nhật các phần tử có data-key
+            document.querySelectorAll('[data-key]').forEach(element => {
+                const key = element.getAttribute('data-key');
+                if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+        }
+
+        // Xử lý sự kiện click nút ngôn ngữ
+        langButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const lang = button.getAttribute('data-lang');
+
+                // Cập nhật trạng thái active của nút
+                langButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                // Render nội dung theo ngôn ngữ
+                renderLanguage(lang);
+            });
+        });
+
+        // Khởi tạo với ngôn ngữ mặc định
+        renderLanguage(currentLang);
+    </script>
+</body>
+
+</html>
