@@ -14,14 +14,15 @@ import {
   ImportResult,
   ColumnMapping,
 } from "./types";
+// Import logger configuration for internal use
+import {
+  SQLiteModules,
+  createModuleLogger,
+  CommonLoggerConfig,
+} from "./logger/logger-config";
 
 // ========================== LOGGER EXPORTS ==========================
-export {
-  SQLiteLoggerConfig,
-  SQLiteModules,
-  sqliteLogger,
-  createModuleLogger,
-} from "./logger/logger-config";
+export { SQLiteModules } from "./logger/logger-config";
 
 // ========================== CORE EXPORTS ==========================
 export { UniversalDAO } from "./core/universal-dao";
@@ -46,13 +47,6 @@ export { BaseAdapter } from "./adapters/base-adapter";
 
 // ========================== TYPE EXPORTS ==========================
 export * from "./types";
-
-// Import logger configuration for internal use
-import {
-  SQLiteLoggerConfig,
-  createModuleLogger,
-  SQLiteModules,
-} from "./logger/logger-config";
 
 // ========================== UNIFIED INTERFACE ==========================
 
@@ -121,37 +115,37 @@ export class UniversalSQLite {
    * @param config - Logger configuration object
    */
   static configureLogger(config: any): void {
-    SQLiteLoggerConfig.updateConfiguration(config);
+    CommonLoggerConfig.updateConfiguration(config);
   }
 
   /**
    * Enable debug logging for development
    */
   static enableDebugLogging(): void {
-    const debugConfig = SQLiteLoggerConfig.createDebugConfig();
-    SQLiteLoggerConfig.updateConfiguration(debugConfig);
+    const debugConfig = CommonLoggerConfig.createDebugConfig();
+    CommonLoggerConfig.updateConfiguration(debugConfig);
   }
 
   /**
    * Set production logging (errors and warnings only)
    */
   static setProductionLogging(): void {
-    const prodConfig = SQLiteLoggerConfig.createProductionConfig();
-    SQLiteLoggerConfig.updateConfiguration(prodConfig);
+    const prodConfig = CommonLoggerConfig.createProductionConfig();
+    CommonLoggerConfig.updateConfiguration(prodConfig);
   }
 
   /**
    * Enable logging globally
    */
   static enableLogging(): void {
-    SQLiteLoggerConfig.setEnabled(true);
+    CommonLoggerConfig.setEnabled(true);
   }
 
   /**
    * Disable logging globally
    */
   static disableLogging(): void {
-    SQLiteLoggerConfig.setEnabled(false);
+    CommonLoggerConfig.setEnabled(false);
   }
 
   /**
@@ -162,14 +156,14 @@ export class UniversalSQLite {
     levels?: string[],
     appenders?: string[]
   ): void {
-    SQLiteLoggerConfig.enableModule(moduleName, levels, appenders);
+    CommonLoggerConfig.enableModule(moduleName, levels, appenders);
   }
 
   /**
    * Disable specific module logging
    */
   static disableModuleLogging(moduleName: string): void {
-    SQLiteLoggerConfig.disableModule(moduleName);
+    CommonLoggerConfig.disableModule(moduleName);
   }
 
   // ========================== INITIALIZATION METHODS ==========================
@@ -226,7 +220,7 @@ export class UniversalSQLite {
       // Configure logger if provided
       if (options.loggerConfig) {
         this.logger.debug("Configuring custom logger");
-        SQLiteLoggerConfig.updateConfiguration(options.loggerConfig);
+        CommonLoggerConfig.updateConfiguration(options.loggerConfig);
       }
 
       // Register adapters if provided
