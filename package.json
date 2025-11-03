@@ -63,14 +63,35 @@
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^18.0.0",
+    "@types/react-native-sqlite-storage": "^6.0.5",
+    "better-sqlite3": "^12.4.1",
     "esbuild": "^0.25.9",
     "javascript-obfuscator": "^4.1.1",
     "obfuscate": "^0.0.11",
+    "react-native": "0.79.2",
+    "react-native-sqlite-storage": "^6.0.1",
     "rimraf": "^6.0.1",
     "rollup": "^4.49.0",
     "rollup-plugin-esbuild": "^6.2.1",
     "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^12.4.1",
+    "react-native": "0.79.2",
+    "react-native-sqlite-storage": "^6.0.1"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-sqlite-storage": {
+      "optional": true
+    }
   },
   "overrides": {
     "glob": "^11.0.3",

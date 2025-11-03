@@ -17,7 +17,7 @@ import {
 } from "../types";
 
 // Import logger configuration for internal use
-import { SQLiteModules, createModuleLogger } from "../logger/logger-config";
+import { SQLiteModules, createModuleLogger } from "../logger";
 
 export class UniversalDAO {
   private connection: SQLiteConnection | null = null;
@@ -360,15 +360,64 @@ export class UniversalDAO {
     );
 
     const foreignKeyDefs: string[] = [];
-    if (table.foreign_keys) {
+
+    // Hỗ trợ cả foreign_keys và foreignKeys
+    const foreignKeys = table.foreign_keys;
+
+    if (foreignKeys) {
       this.logger.debug("Processing foreign keys", {
         tableName: table.name,
-        fkCount: table.foreign_keys.length,
+        fkCount: foreignKeys.length,
       });
-      for (const fk of table.foreign_keys) {
-        let fkSql = `FOREIGN KEY (${fk.column}) REFERENCES ${fk.references.table}(${fk.references.column})`;
-        if (fk.on_delete) fkSql += ` ON DELETE ${fk.on_delete}`;
-        if (fk.on_update) fkSql += ` ON UPDATE ${fk.on_update}`;
+
+      for (const fk of foreignKeys) {
+        // Lấy column(s) - hỗ trợ cả snake_case và camelCase, số ít và số nhiều
+        const columns: string[] =
+          fk.columns || fk.column
+            ? Array.isArray(fk.columns || fk.column)
+              ? ((fk.columns || fk.column) as any)
+              : [fk.columns || fk.column]
+            : [];
+
+        if (columns.length === 0) {
+          this.logger.warn("Foreign key without columns found", {
+            tableName: table.name,
+            foreignKey: fk,
+          });
+          continue;
+        }
+
+        // Lấy reference table
+        const refTable = fk.references?.table;
+
+        // Lấy reference column(s) - hỗ trợ cả số ít và số nhiều
+        const refColumns: string[] =
+          fk.references?.columns || fk.references?.column
+            ? Array.isArray(fk.references?.columns || fk.references?.column)
+              ? ((fk.references?.columns || fk.references?.column) as any)
+              : [fk.references?.columns || fk.references?.column]
+            : [];
+
+        if (!refTable || refColumns.length === 0) {
+          this.logger.warn("Invalid foreign key reference", {
+            tableName: table.name,
+            foreignKey: fk,
+          });
+          continue;
+        }
+        
+        // Tạo foreign key SQL
+        let fkSql = `FOREIGN KEY (${columns.join(
+          ", "
+        )}) REFERENCES ${refTable}(${refColumns.join(", ")})`;
+
+        // Hỗ trợ cả on_delete/onDelete và on_update/onUpdate
+        const onDelete = fk.on_delete;
+        const onUpdate = fk.on_update;
+
+        if (onDelete) fkSql += ` ON DELETE ${onDelete}`;
+        if (onUpdate) fkSql += ` ON UPDATE ${onUpdate}`;
+
         foreignKeyDefs.push(fkSql);
       }
     }

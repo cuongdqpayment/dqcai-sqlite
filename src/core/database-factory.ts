@@ -1,7 +1,7 @@
 // src/core/database-factory.ts
 import { SQLiteAdapter, DatabaseSchema, DbFactoryOptions } from "../types";
 import { UniversalDAO } from "./universal-dao";
-import { createModuleLogger, SQLiteModules } from "../logger/logger-config";
+import { createModuleLogger, SQLiteModules } from "../logger";
 
 const logger = createModuleLogger(SQLiteModules.DATABASE_FACTORY);
 
@@ -66,7 +66,7 @@ export class DatabaseFactory {
    * @returns The best available SQLite adapter
    * @throws Error if no supported adapter is found
    */
-  private static detectBestAdapter(): SQLiteAdapter {
+  private static async detectBestAdapter(): Promise<SQLiteAdapter> {
     logger.trace("Detecting best available SQLite adapter", {
       totalAdapters: this.adapters.length,
       environment: this.getEnvironmentInfo(),
@@ -75,7 +75,7 @@ export class DatabaseFactory {
     for (const adapter of this.adapters) {
       logger.trace(`Testing adapter: ${adapter.constructor.name}`);
 
-      if (adapter.isSupported()) {
+      if (await adapter.isSupported()) {
         logger.info(`Selected adapter: ${adapter.constructor.name}`, {
           adapterName: adapter.constructor.name,
           environment: this.getEnvironmentInfo(),
@@ -201,14 +201,14 @@ export class DatabaseFactory {
    * @param options Configuration options
    * @returns A new UniversalDAO instance
    */
-  static createDAO(
+  static async createDAO(
     dbPath: string,
     options?: {
       adapter?: SQLiteAdapter;
       createIfNotExists?: boolean;
       forceRecreate?: boolean;
     }
-  ): UniversalDAO {
+  ): Promise<UniversalDAO> {
     logger.info("Creating new UniversalDAO instance", {
       dbPath,
       hasCustomAdapter: !!options?.adapter,
@@ -225,7 +225,7 @@ export class DatabaseFactory {
       adapter = options.adapter;
     } else {
       logger.debug("Detecting best adapter automatically");
-      adapter = this.detectBestAdapter();
+      adapter = await this.detectBestAdapter();
     }
 
     const dao = new UniversalDAO(adapter, dbPath, {
@@ -265,7 +265,7 @@ export class DatabaseFactory {
     });
 
     // Create and connect DAO instance
-    const dao = this.createDAO(dbFileName, options);
+    const dao = await this.createDAO(dbFileName, options);
 
     try {
       logger.debug("Connecting to database", { dbFileName });
@@ -355,7 +355,7 @@ export class DatabaseFactory {
       forceRecreate: isForceDelete,
     });
 
-    const dao = this.createDAO(dbFileName, {
+    const dao = await this.createDAO(dbFileName, {
       adapter: options.adapter,
       createIfNotExists: isForceInit,
       forceRecreate: isForceDelete,

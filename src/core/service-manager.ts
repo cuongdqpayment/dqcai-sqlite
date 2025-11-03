@@ -2,7 +2,7 @@
 import { BaseService } from "./base-service";
 import { ServiceStatus, HealthCheckResult } from "../types";
 
-import { createModuleLogger, SQLiteModules } from "../logger/logger-config";
+import { createModuleLogger, SQLiteModules } from "../logger";
 
 const logger = createModuleLogger(SQLiteModules.SERVICE_MANAGER);
 
@@ -77,7 +77,7 @@ export class ServiceManager {
 
   // Lifecycle management
   private isShuttingDown = false;
-  private cleanupInterval: NodeJS.Timeout | null = null;
+  private cleanupInterval: any | null = null;
 
   private constructor() {
     logger.info("ServiceManager instance created");

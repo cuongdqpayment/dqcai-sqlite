@@ -1,4 +1,4 @@
-// src/logger/logger-config.ts - Alternative solution using Proxy pattern
+// src/logger/index.ts
 
 import {
   BaseModule,

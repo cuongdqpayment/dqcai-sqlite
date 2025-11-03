@@ -2,7 +2,7 @@
 import { SQLiteAdapter, SQLiteConnection } from '../types';
 export abstract class BaseAdapter implements SQLiteAdapter {
   abstract connect(path: string): Promise<SQLiteConnection>;
-  abstract isSupported(): boolean;
+  abstract isSupported(): Promise<boolean>;
 
   protected sanitizeSQL(sql: string): string {
     return sql.trim();

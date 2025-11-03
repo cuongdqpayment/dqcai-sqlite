@@ -19,10 +19,10 @@ import {
   SQLiteModules,
   createModuleLogger,
   CommonLoggerConfig,
-} from "./logger/logger-config";
+} from "./logger";
 
 // ========================== LOGGER EXPORTS ==========================
-export { SQLiteModules } from "./logger/logger-config";
+export { SQLiteModules } from "./logger";
 
 // ========================== CORE EXPORTS ==========================
 export { UniversalDAO } from "./core/universal-dao";
@@ -44,6 +44,8 @@ export { QueryBuilder } from "./query/query-builder";
 
 // ========================== ADAPTERS ==========================
 export { BaseAdapter } from "./adapters/base-adapter";
+export { NodeJSAdapter } from "./adapters/nodejs-adapter";
+export { ReactNativeAdapter } from "./adapters/reactnative-adapter";
 
 // ========================== TYPE EXPORTS ==========================
 export * from "./types";
@@ -1081,17 +1083,17 @@ export class UniversalSQLite {
 /**
  * Create UniversalDAO instance
  */
-export const createUniversalDAO = (
+export const createUniversalDAO = async (
   dbPath: string,
   options?: {
     adapter?: SQLiteAdapter;
     createIfNotExists?: boolean;
     forceRecreate?: boolean;
   }
-): UniversalDAO => {
+): Promise<UniversalDAO> => {
   const logger = createModuleLogger(SQLiteModules.DATABASE_FACTORY);
   logger.debug("Creating UniversalDAO", { dbPath, options });
-  return DatabaseFactory.createDAO(dbPath, options);
+  return await DatabaseFactory.createDAO(dbPath, options);
 };
 
 /**

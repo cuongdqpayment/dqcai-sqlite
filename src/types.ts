@@ -16,7 +16,7 @@ export interface SQLiteConnection {
 
 export interface SQLiteAdapter {
   connect(path: string): Promise<SQLiteConnection>;
-  isSupported(): boolean;
+  isSupported(): Promise<boolean>;
   name?: string;
   version?: string;
 }
@@ -96,17 +96,39 @@ export type ForeignKeyAction =
   | "NO ACTION"
   | undefined;
 
-export interface ForeignKeyDefinition {
+/* export interface ForeignKeyDefinition {
   name: string;
-  column: string;
+  columns: string[];
   references: {
     table: string;
-    column: string;
+    columns: string[];
   };
   on_delete?: string | ForeignKeyAction;
   on_update?: string | ForeignKeyAction;
   description?: string;
+} */
+
+/**
+ * Foreign key definition
+ */
+interface ReferencesBase {
+  table: string;
 }
+type References = ReferencesBase &
+  ({ column: string; columns?: never } | { column?: never; columns: string[] });
+
+// Định nghĩa base cho ForeignKeyDefinition
+interface ForeignKeyDefinitionBase {
+  name: string;
+  references: References;
+  on_delete?: string | ForeignKeyAction;
+  on_update?: string | ForeignKeyAction;
+  description?: string;
+}
+
+// Ràng buộc ForeignKeyDefinition phải có ít nhất field hoặc fields
+export type ForeignKeyDefinition = ForeignKeyDefinitionBase &
+  ({ column: string; columns?: never } | { column?: never; columns: string[] });
 
 export interface TableDefinition {
   name: string;
@@ -251,3 +273,51 @@ declare global {
   //   product?: string;
   // } | undefined;
 }
+
+export const SQLITE_TYPE_MAPPING = {
+  sqlite: {
+    // String types
+    string: "TEXT",
+    varchar: "TEXT",
+    char: "TEXT",
+    text: "TEXT",
+    email: "TEXT",
+    url: "TEXT",
+    uuid: "TEXT",
+
+    // Numeric types
+    integer: "INTEGER",
+    int: "INTEGER",
+    bigint: "INTEGER",
+    smallint: "INTEGER",
+    tinyint: "INTEGER",
+    number: "REAL",
+    decimal: "REAL",
+    numeric: "REAL",
+    float: "REAL",
+    double: "REAL",
+
+    // Boolean
+    boolean: "INTEGER",
+    bool: "INTEGER",
+
+    // Date/Time types
+    timestamp: "TEXT",
+    datetime: "TEXT",
+    date: "TEXT",
+    time: "TEXT",
+
+    // Complex types
+    json: "TEXT",
+    jsonb: "TEXT",
+    array: "TEXT",
+    object: "TEXT",
+
+    // Binary types
+    blob: "BLOB",
+    binary: "BLOB",
+
+    // MongoDB specific (fallback)
+    objectid: "TEXT",
+  },
+};

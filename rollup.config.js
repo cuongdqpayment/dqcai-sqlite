@@ -8,22 +8,19 @@ export default {
   external: [], // Không có external deps
   output: [
     {
-      file: 'lib/index.js', // CommonJS use: import ... from '...';
+      dir: 'lib',
       format: 'cjs',
-      sourcemap: true, // Tùy chọn: Thêm source map để debug
-      exports: 'auto'
+      entryFileNames: '[name].js',
+      sourcemap: true,
+      exports: 'named'
     },
     {
-      file: 'lib/index.mjs', // ES Module: use = require('..');
+      dir: 'lib',
       format: 'esm',
+      entryFileNames: '[name].mjs',
       sourcemap: true,
-    },
-    {
-      file: 'lib/index.umd.js', // UMD cho browser và hybrid
-      format: 'umd',
-      name: 'UniversalSqlite', // Tên global variable cho browser
-      sourcemap: true,
-    },
+      exports: 'named'
+    }
   ],
   plugins: [
     nodeResolve(), // Giải quyết các phụ thuộc node_modules
@@ -40,5 +37,10 @@ export default {
     })
 
   ],
-  external: [], // Chỉ định các phụ thuộc bên ngoài nếu cần (ví dụ: không bundle tslib nếu dùng importHelpers)
+  external: [
+    'better-sqlite3',              // Node.js
+    'react-native-sqlite-storage',  // React Native
+    'expo-sqlite',                  // Expo
+    /^react-native/,               // Tất cả RN modules
+  ], // Chỉ định các phụ thuộc bên ngoài nếu cần (ví dụ: không bundle tslib nếu dùng importHelpers)
 };

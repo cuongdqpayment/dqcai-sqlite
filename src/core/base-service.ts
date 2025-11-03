@@ -11,7 +11,7 @@ import {
 } from "../types";
 import { UniversalDAO } from "./universal-dao";
 import { DatabaseManager } from "./database-manager";
-import { createModuleLogger, SQLiteModules } from "../logger/logger-config";
+import { createModuleLogger, SQLiteModules } from "../logger";
 
 const logger = createModuleLogger(SQLiteModules.BASE_SERVICE);
 

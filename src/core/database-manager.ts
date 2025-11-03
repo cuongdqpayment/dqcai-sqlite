@@ -8,7 +8,7 @@ import {
 } from "../types";
 import { DatabaseFactory } from "./database-factory";
 import { UniversalDAO } from "./universal-dao";
-import { createModuleLogger, SQLiteModules } from "../logger/logger-config";
+import { createModuleLogger, SQLiteModules } from "../logger";
 
 const logger = createModuleLogger(SQLiteModules.DATABASE_MANAGER);
 
