@@ -31,7 +31,7 @@ export function configureSQLiteLogger(
   enabled: boolean = true,
   defaultLevel: 'trace' | 'debug' | 'info' | 'warn' | 'error' = 'warn'
 ) {
-  console.log(`🔧 [SQLite] Configuring logger: enabled=${enabled}, level=${defaultLevel}`);
+  // console.log(`🔧 [SQLite] Configuring logger: enabled=${enabled}, level=${defaultLevel}`);
   
   const config = new LoggerConfigBuilder()
     .setEnabled(enabled)
@@ -40,7 +40,7 @@ export function configureSQLiteLogger(
     
   CommonLoggerConfig.updateConfiguration(config);
   
-  console.log("✅ [SQLite] Logger configured:", CommonLoggerConfig.getCurrentConfig());
+  // console.log("✅ [SQLite] Logger configured:", CommonLoggerConfig.getCurrentConfig());
 }
 
 // khởi tạo default config cho thư viện

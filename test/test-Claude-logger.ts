@@ -154,7 +154,7 @@ async function main() {
       },
     ];
 
-    const importResult = await userService.bulkUpsert(users, ["username", "email"]);
+    const importResult = await userService.bulkUpsert(users, ["email"]);
     console.log(`✅ Users imported: ${importResult.total} successful`);
 
     // 4. Query data
@@ -186,16 +186,19 @@ async function main() {
         throw new Error("Failed to create store");
       }
 
-      await userSvc.upsert({
-        id: crypto.randomUUID(),
-        store_id: newStore.id,
-        username: "branch_manager",
-        password_hash: "hashed_password",
-        full_name: "Branch Manager",
-        email: "manager@branch.com",
-        role: "manager",
-        is_active: true,
-      });
+      await userSvc.upsert(
+        {
+          id: crypto.randomUUID(),
+          store_id: newStore.id,
+          username: "branch_manager",
+          password_hash: "hashed_password",
+          full_name: "Branch Manager",
+          email: "manager@branch.com",
+          role: "manager",
+          is_active: true,
+        },
+        ["email"]
+      );
     });
     console.log("✅ Transaction completed");
 
@@ -225,4 +228,13 @@ async function main() {
 }
 
 // Run test
-main().catch(console.error);
+// Run the application
+main()
+  .then(() => {
+    console.log("✅ All examples completed successfully!\n");
+    process.exit(1);
+  })
+  .catch((error) => {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });
