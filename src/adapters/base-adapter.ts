@@ -1,5 +1,7 @@
 // src/adapters/base-adapter.ts
-import { SQLiteAdapter, SQLiteConnection } from '../types';
+import { SQLiteAdapter, SQLiteConnection } from '@/types';
+
+
 export abstract class BaseAdapter implements SQLiteAdapter {
   abstract connect(path: string): Promise<SQLiteConnection>;
   abstract isSupported(): Promise<boolean>;

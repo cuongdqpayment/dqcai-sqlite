@@ -17,6 +17,8 @@ const SQLiteModules = {
   SERVICE_MANAGER: "ServiceManager",
   QUERY_BUILDER: "QueryBuilder",
   BASE_ADAPTER: "BaseAdapter",
+  NODEJS_ADAPTER: "NodeJSAdapter",
+  REACTNATIVE_ADAPTER: "RN-Adapter",
   UNIVERSAL_SQLITE: "UniversalSQLite",
   TRANSACTION: "Transaction",
   CONNECTION: "Connection",
@@ -28,6 +30,5 @@ const config = new LoggerConfigBuilder()
   .build();
 // cập nhập cấu hình trong dự án này
 CommonLoggerConfig.updateConfiguration(config);
-// nếu nhúng vào các dự án khác thì cập nhập cấu hình mới là được
-// gọi chung instance
+console.log("@dqcai/sqlite logger update!");
 export { BaseModule, createModuleLogger, SQLiteModules, CommonLoggerConfig };

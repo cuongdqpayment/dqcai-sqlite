@@ -8,10 +8,10 @@ import {
   ImportOptions,
   ServiceStatus,
   HealthCheckResult,
-} from "../types";
+} from "@/types";
 import { UniversalDAO } from "./universal-dao";
 import { DatabaseManager } from "./database-manager";
-import { createModuleLogger, SQLiteModules } from "../logger";
+import { createModuleLogger, SQLiteModules } from "@/logger";
 
 const logger = createModuleLogger(SQLiteModules.BASE_SERVICE);
 

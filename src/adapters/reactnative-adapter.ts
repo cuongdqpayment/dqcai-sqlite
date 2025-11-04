@@ -1,8 +1,8 @@
 /* eslint-disable quotes */
 // ./src/adapters/ReactNativeAdapter.ts
 import { BaseAdapter } from "./base-adapter";
-import { createModuleLogger, SQLiteModules } from "../logger";
-const logger = createModuleLogger(SQLiteModules.BASE_ADAPTER);
+import { createModuleLogger, SQLiteModules } from "@/logger";
+const logger = createModuleLogger(SQLiteModules.REACTNATIVE_ADAPTER);
 
 // Định nghĩa types để tránh lỗi TypeScript
 type SQLiteDatabase = any;

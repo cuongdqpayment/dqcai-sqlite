@@ -9,8 +9,9 @@ import {
 import { DatabaseFactory } from "./database-factory";
 import { UniversalDAO } from "./universal-dao";
 
-import { createModuleLogger, SQLiteModules } from "../logger";
+import { createModuleLogger, SQLiteModules, CommonLoggerConfig } from "@/logger";
 const logger = createModuleLogger(SQLiteModules.DATABASE_MANAGER);
+console.log("XXXX", CommonLoggerConfig.getCurrentConfig());
 
 export type DatabaseConnections = {
   [key: string]: UniversalDAO;
@@ -307,6 +308,8 @@ export class DatabaseManager {
    * Initialize core database connection
    */
   public static async initializeCoreConnection(): Promise<void> {
+
+    console.log("initializeCoreConnection logger config:", CommonLoggerConfig.getCurrentConfig());
     logger.debug("Initializing core database connection");
 
     if (this.connections["core"]) {

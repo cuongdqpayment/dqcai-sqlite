@@ -7,13 +7,10 @@ import {
 import { NodeJSAdapter } from "@dqcai/sqlite";
 import { core as coreSchema } from "./schemas.sqlite";
 
-// ========== BƯỚC 1: Setup Adapters ==========
-DatabaseFactory.registerAdapter(new NodeJSAdapter());
+import { createModuleLogger, APPModules, CommonLoggerConfig } from "./logger";
+const logger = createModuleLogger(APPModules.TEST_ORM);
 
-// ========== BƯỚC 2: Đăng ký Schemas ==========
-DatabaseManager.registerSchema("core", coreSchema);
-
-// ========== BƯỚC 3: Định nghĩa Services ==========
+// ========== BƯỚC 1: Định nghĩa Services ==========
 class UserService extends BaseService {
   constructor() {
     super("core", "users");
@@ -62,7 +59,8 @@ class StoreService extends BaseService {
   }
 }
 
-// ========== BƯỚC 4: Đăng ký Services ==========
+// ========== BƯỚC 2: Đăng ký Services ==========
+logger.debug("\n🔌 1.Registering services...");
 const serviceManager = ServiceManager.getInstance();
 
 serviceManager.registerServices([
@@ -82,11 +80,25 @@ serviceManager.registerServices([
   },
 ]);
 
-// ========== BƯỚC 5: Khởi tạo và sử dụng ==========
+// ========== BƯỚC x: Khởi tạo và sử dụng ==========
 async function main() {
   try {
+    logger.debug("🔌 2.Registering Adapters...");
+    // ========== BƯỚC 1: Setup Adapters ==========
+    DatabaseFactory.registerAdapter(new NodeJSAdapter());
+
+    // ========== BƯỚC 2: Đăng ký Schemas ==========
+    DatabaseManager.registerSchema("core", coreSchema);
+
+    logger.debug("🔧 3.Initializing database...\n");
+
+
+
+    console.log("Test now:", CommonLoggerConfig.getCurrentConfig());
     // Khởi tạo core database
     await DatabaseManager.initializeCoreConnection();
+
+
 
     // Lấy services
     const enterpriseService = await serviceManager.getService(

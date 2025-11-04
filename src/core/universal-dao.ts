@@ -14,10 +14,10 @@ import {
   TypeMappingConfig,
   WhereClause,
   ColumnMapping,
-} from "../types";
+} from "@/types";
 
 // Import logger configuration for internal use
-import { SQLiteModules, createModuleLogger } from "../logger";
+import { SQLiteModules, createModuleLogger } from "@/logger";
 const logger = createModuleLogger(SQLiteModules.UNIVERSAL_DAO);
 
 export class UniversalDAO {

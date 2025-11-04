@@ -1,8 +1,9 @@
 /* eslint-disable quotes */
 // ./srr/adapters/NodeJSAdapter.ts
 import { BaseAdapter } from "./base-adapter";
-import { createModuleLogger, SQLiteModules } from "../logger";
-const logger = createModuleLogger(SQLiteModules.BASE_ADAPTER);
+
+import { createModuleLogger, SQLiteModules } from "@/logger";
+const logger = createModuleLogger(SQLiteModules.NODEJS_ADAPTER);
 
 // Định nghĩa types để tránh lỗi TypeScript
 type BetterSqlite3Database = any;

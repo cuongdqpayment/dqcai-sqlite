@@ -18,7 +18,15 @@
     "declarationMap": true,
     "rootDir": "./src",
     "outDir": "lib",
-    "jsx": "react-native"
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/adapters/*": ["src/adapters/*"],
+      "@/core/*": ["src/core/*"],
+      "@/logger/*": ["src/logger/*"],
+      "@/query/*": ["src/query/*"]
+    }
   },
   "include": [
     "src/**/*"

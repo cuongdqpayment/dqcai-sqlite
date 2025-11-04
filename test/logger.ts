@@ -19,4 +19,5 @@ const config = new LoggerConfigBuilder()
   .build();
 
 CommonLoggerConfig.updateConfiguration(config);
-export { createModuleLogger, APPModules };
+console.log("### -->Registered logger config from test!");
+export { createModuleLogger, APPModules, CommonLoggerConfig };

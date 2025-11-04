@@ -1,8 +1,8 @@
 // src/core/service-manager.ts
 import { BaseService } from "./base-service";
-import { ServiceStatus, HealthCheckResult } from "../types";
+import { ServiceStatus, HealthCheckResult } from "@/types";
 
-import { createModuleLogger, SQLiteModules } from "../logger";
+import { createModuleLogger, SQLiteModules } from "@/logger";
 const logger = createModuleLogger(SQLiteModules.SERVICE_MANAGER);
 
 // Concrete service class mặc định
