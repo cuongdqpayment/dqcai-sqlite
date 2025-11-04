@@ -32,7 +32,10 @@
     "prebuild": "npm run clean",
     "obfuscate": "node ./scripts/obfuscate.mjs",
     "prepublishOnly": "npm run build && npm run obfuscate",
-    "release": "npm publish --access public"
+    "release": "npm publish --access public",
+    "release:patch": "npm version patch && npm run build  && npm run obfuscate && npm publish --access public",
+    "release:minor": "npm version minor && npm run build  && npm run obfuscate && npm publish --access public",
+    "release:major": "npm version major && npm run build  && npm run obfuscate && npm publish --access public"
   },
   "keywords": [
     "sqlite",
