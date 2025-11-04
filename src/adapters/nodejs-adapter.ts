@@ -1,5 +1,5 @@
 /* eslint-disable quotes */
-// adapters/NodeJSAdapter.ts
+// ./srr/adapters/NodeJSAdapter.ts
 import { BaseAdapter } from "./base-adapter";
 import { createModuleLogger, SQLiteModules } from "../logger";
 const logger = createModuleLogger(SQLiteModules.BASE_ADAPTER);

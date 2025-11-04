@@ -1,5 +1,5 @@
 /* eslint-disable quotes */
-// adapters/ReactNativeAdapter.ts
+// ./src/adapters/ReactNativeAdapter.ts
 import { BaseAdapter } from "./base-adapter";
 import { createModuleLogger, SQLiteModules } from "../logger";
 const logger = createModuleLogger(SQLiteModules.BASE_ADAPTER);

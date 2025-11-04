@@ -38,62 +38,6 @@ async function initializeDatabase() {
   console.log("\n🔌 Registering services...");
   const serviceManager = ServiceManager.getInstance();
 
-  // serviceManager.registerService({
-  //   schemaName: "core",
-  //   entityName: "users",
-  //   serviceClass: UserService,
-  //   autoInit: true,
-  // });
-
-  // serviceManager.registerService({
-  //   schemaName: "core",
-  //   entityName: "posts",
-  //   serviceClass: PostService,
-  //   autoInit: true,
-  // });
-
-  // serviceManager.registerService({
-  //   schemaName: "core",
-  //   entityName: "comments",
-  //   serviceClass: CommentService,
-  //   autoInit: true,
-  // });
-
-  // serviceManager.registerService({
-  //   schemaName: "core",
-  //   entityName: "tags",
-  //   serviceClass: TagService,
-  //   autoInit: true,
-  // });
-
-  // serviceManager.registerService({
-  //   schemaName: "core",
-  //   entityName: "post_tags",
-  //   serviceClass: PostTagService,
-  //   autoInit: true,
-  // });
-
-  // console.log("✓ All services registered\n");
-
-  // // 8. Test that services use the same adapter
-  // console.log("🔍 Verifying adapter sharing...");
-  // const userService = await serviceManager.getService<UserService>(
-  //   "core",
-  //   "users"
-  // );
-
-  // // Try to create a test user to verify database access
-  // try {
-  //   await userService.create({
-  //     username: "test_init",
-  //     email: "test@init.com",
-  //     password_hash: "test_hash",
-  //     full_name: "Test Init User",
-  //   });
-  //   console.log("✓ Services can access the same database\n");
-  // } catch (error) {
-  //   console.log("ℹ Test user creation:", (error as Error).message, "\n");
-  // }
 }
 
 // ============================================
@@ -113,14 +57,6 @@ async function main() {
 
     // Initialize
     await initializeDatabase();
-
-    // Run examples
-    // await example1_BasicCRUD();
-    // await example2_AdvancedQueries();
-    // await example3_Relationships();
-    // await example4_Tags();
-    // await example5_Comments();
-    // await example6_Statistics();
 
     console.log("✅ All examples completed successfully!\n");
   } catch (error) {

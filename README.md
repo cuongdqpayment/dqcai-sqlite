@@ -30,575 +30,717 @@ yarn add @dqcai/sqlite @dqcai/logger
 pnpm add @dqcai/sqlite @dqcai/logger
 ```
 
-## ⚡ Quick Start
+### Cài đặt dependencies theo môi trường
 
-```typescript
-import { DatabaseManager, ServiceManager, BaseService } from '@dqcai/sqlite';
+**React Native:**
 
-// 1. Define your schema
-const userSchema = {
-  version: "1.0.0",
-  database_name: "users",
-  schemas: {
-    users: {
-      cols: [
-        { name: "id", type: "integer", primary_key: true, auto_increment: true },
-        { name: "username", type: "varchar", length: 50, unique: true },
-        { name: "email", type: "varchar", length: 100, unique: true },
-        { name: "created_at", type: "datetime", default: "CURRENT_TIMESTAMP" }
-      ]
-    }
-  }
-};
-
-// 2. Initialize database
-await DatabaseManager.registerSchema('users', userSchema);
-await DatabaseManager.initializeCoreConnection();
-
-// 3. Create service
-class UserService extends BaseService {
-  async createUser(data) {
-    return await this.create(data);
-  }
-  
-  async getAllUsers() {
-    return await this.findAll();
-  }
-}
-
-// 4. Use it!
-const service = new UserService('users', 'users');
-const user = await service.createUser({ 
-  username: 'john', 
-  email: 'john@example.com' 
-});
+```bash
+npm install react-native-sqlite-storage
 ```
 
-## 📝 Logger Integration (v3.1.0+)
+**Node.js:**
 
-@dqcai/sqlite integrates seamlessly with [@dqcai/logger](https://www.npmjs.com/package/@dqcai/logger) for comprehensive logging capabilities across your entire application.
-
-### Step 1: Configure Logger
-
-Create a centralized logger configuration file:
-
-```typescript
-// ./src/configs/logger.ts
-import {
-  LogLevel,
-  LoggerConfigBuilder,
-  createModuleLogger,
-  CommonLoggerConfig,
-} from "@dqcai/logger";
-
-import { SQLiteModules } from "@dqcai/sqlite"; // version 3.1.0+
-
-// Define your application modules
-const AppModules = {
-  ...SQLiteModules, // Includes: UNIVERSAL_SQLITE, UNIVERSAL_DAO, etc.
-  MIDDLEWARE: "middleware",
-  API: "api",
-  AUTH: "auth",
-  // Add your custom modules here
-};
-
-// Configure logger settings
-const config = new LoggerConfigBuilder()
-  .setEnabled(true) // Enable logging globally
-  .setDefaultLevel('trace') // Set default log level: trace, debug, info, warn, error
-  // Optional: Configure specific modules
-  .addModule(SQLiteModules.UNIVERSAL_SQLITE, true, ['info', 'warn', 'error'], ['console'])
-  .addModule(SQLiteModules.UNIVERSAL_DAO, true, ['debug', 'info', 'warn', 'error'], ['console'])
-  .addModule(AppModules.MIDDLEWARE, true, ['trace', 'debug', 'info', 'warn', 'error'], ['console'])
-  .build();
-
-// Apply configuration
-CommonLoggerConfig.updateConfiguration(config);
-
-export { createModuleLogger, AppModules };
+```bash
+npm install better-sqlite3
 ```
 
-### Step 2: Use Logger in Your Modules
+## 2. Lựa chọn Adapter theo môi trường
 
-Replace `console.log/debug/warn/error` with the module logger:
-
-```typescript
-// ./src/middleware/auth.ts
-import { createModuleLogger, AppModules } from "@/configs/logger";
-
-const logger = createModuleLogger(AppModules.MIDDLEWARE);
-
-export function authMiddleware(req, res, next) {
-  logger.trace("Middleware importing...");
-  logger.debug("Processing authentication", { userId: req.userId });
-  logger.info("User authenticated successfully");
-  logger.warn("Token expires soon", { expiresIn: 300 });
-  logger.error("Authentication failed", { reason: "Invalid token" });
-  
-  next();
-}
-```
-
-### Step 3: Use Logger in Services
+### React Native Adapter
 
 ```typescript
-// ./src/services/UserService.ts
-import { BaseService } from '@dqcai/sqlite';
-import { createModuleLogger, AppModules } from "@/configs/logger";
+import { ReactNativeAdapter, DatabaseFactory } from "@dqcai/sqlite";
 
-const logger = createModuleLogger(AppModules.API);
-
-interface User {
-  id?: number;
-  username: string;
-  email: string;
-}
-
-class UserService extends BaseService<User> {
-  constructor() {
-    super('users', 'users');
-    logger.info("UserService initialized");
-  }
-
-  async createUser(data: Omit<User, 'id'>): Promise<User | null> {
-    logger.debug("Creating user", { username: data.username });
-    
-    try {
-      const user = await this.create(data);
-      logger.info("User created successfully", { userId: user?.id });
-      return user;
-    } catch (error) {
-      logger.error("Failed to create user", { error, data });
-      throw error;
-    }
-  }
-
-  async findByEmail(email: string): Promise<User | null> {
-    logger.trace("Searching user by email", { email });
-    return await this.findFirst({ email });
-  }
-}
-```
-
-### Advanced Logger Configuration
-
-#### Environment-based Configuration
-
-```typescript
-// ./src/configs/logger.ts
-const isDevelopment = process.env.NODE_ENV === 'development';
-const logLevel = process.env.LOG_LEVEL || (isDevelopment ? 'trace' : 'info');
-const logEnabled = process.env.LOG_ENABLED !== 'false';
-
-const config = new LoggerConfigBuilder()
-  .setEnabled(logEnabled)
-  .setDefaultLevel(logLevel as LogLevel)
-  .build();
-```
-
-#### File Transport
-
-```typescript
-import { FileTransport } from "@dqcai/logger";
-
-const config = new LoggerConfigBuilder()
-  .setEnabled(true)
-  .setDefaultLevel('debug')
-  .addModule(
-    AppModules.API,
-    true,
-    ['info', 'warn', 'error'],
-    ['console', 'file'] // Log to both console and file
-  )
-  .addTransport(new FileTransport({
-    filename: './logs/app.log',
-    maxSize: 10 * 1024 * 1024, // 10MB
-    maxFiles: 5
-  }))
-  .build();
-```
-
-#### API Transport (Remote Logging)
-
-```typescript
-import { APITransport } from "@dqcai/logger";
-
-const config = new LoggerConfigBuilder()
-  .setEnabled(true)
-  .setDefaultLevel('info')
-  .addTransport(new APITransport({
-    url: 'https://your-logging-service.com/logs',
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer YOUR_TOKEN'
-    }
-  }))
-  .build();
-```
-
-### Logger Best Practices
-
-1. **Use appropriate log levels**:
-   - `trace`: Very detailed information for debugging
-   - `debug`: Diagnostic information
-   - `info`: General informational messages
-   - `warn`: Warning messages for potentially harmful situations
-   - `error`: Error messages for serious problems
-
-2. **Include contextual data**:
-```typescript
-logger.info("User action completed", {
-  userId: user.id,
-  action: 'profile_update',
-  timestamp: Date.now()
-});
-```
-
-3. **Don't log sensitive information**:
-```typescript
-// ❌ Bad
-logger.debug("User login", { password: user.password });
-
-// ✅ Good
-logger.debug("User login", { username: user.username });
-```
-
-4. **Use module-specific loggers**:
-```typescript
-// Create separate loggers for different parts of your app
-const authLogger = createModuleLogger(AppModules.AUTH);
-const apiLogger = createModuleLogger(AppModules.API);
-const dbLogger = createModuleLogger(AppModules.UNIVERSAL_SQLITE);
-```
-
-## 🗃️ Core Components
-
-### DatabaseManager
-Central database connection and schema management.
-
-```typescript
-import { DatabaseManager } from '@dqcai/sqlite';
-
-// Register schemas
-DatabaseManager.registerSchemas({
-  users: userSchema,
-  products: productSchema
-});
-
-// Initialize connections
-await DatabaseManager.initializeCoreConnection();
-
-// Get connection
-const dao = DatabaseManager.get('users');
-```
-
-### ServiceManager
-Centralized service lifecycle management with automatic optimization.
-
-```typescript
-import { ServiceManager } from '@dqcai/sqlite';
-
-const serviceManager = ServiceManager.getInstance();
-
-// Register services
-serviceManager.registerService({
-  schemaName: 'users',
-  tableName: 'users',
-  serviceClass: UserService
-});
-
-// Get service instance
-const userService = await serviceManager.getService('users', 'users');
-
-// Health monitoring
-const healthReport = await serviceManager.healthCheck();
-```
-
-### BaseService
-Type-safe CRUD operations with built-in optimization.
-
-```typescript
-import { BaseService } from '@dqcai/sqlite';
-
-interface User {
-  id?: number;
-  username: string;
-  email: string;
-}
-
-class UserService extends BaseService<User> {
-  constructor() {
-    super('users', 'users');
-  }
-
-  async createUser(data: Omit<User, 'id'>): Promise<User | null> {
-    return await this.create(data);
-  }
-
-  async findByEmail(email: string): Promise<User | null> {
-    return await this.findFirst({ email });
-  }
-
-  async updateUser(id: number, data: Partial<User>): Promise<User | null> {
-    return await this.update(id, data);
-  }
-
-  async deleteUser(id: number): Promise<boolean> {
-    return await this.delete(id);
-  }
-}
-```
-
-## 🌐 Platform Support
-
-### Browser
-```typescript
-import { DatabaseFactory, BrowserAdapter } from '@dqcai/sqlite';
-
-DatabaseFactory.registerAdapter(new BrowserAdapter());
-```
-
-### Node.js
-```typescript
-import { DatabaseFactory, NodeAdapter } from '@dqcai/sqlite';
-
-DatabaseFactory.registerAdapter(new NodeAdapter());
-```
-
-### React Native
-```typescript
-import { DatabaseFactory } from '@dqcai/sqlite';
-import { ReactNativeAdapter } from './adapters/ReactNativeAdapter';
-
+// Đăng ký adapter
 DatabaseFactory.registerAdapter(new ReactNativeAdapter());
 ```
 
-### Deno
-```typescript
-import { DatabaseFactory, DenoAdapter } from '@dqcai/sqlite';
+### Node.js Adapter
 
-DatabaseFactory.registerAdapter(new DenoAdapter());
+```typescript
+import { NodeJSAdapter, DatabaseFactory } from "@dqcai/sqlite";
+
+// Đăng ký adapter
+DatabaseFactory.registerAdapter(new NodeJSAdapter());
 ```
 
-## 🔧 Schema Definition
-
-Define your database structure with JSON schemas:
+### Adapter tự động phát hiện
 
 ```typescript
-const schema = {
-  version: "1.0.0",
-  database_name: "myapp",
-  description: "Application database",
+import { DatabaseFactory } from "@dqcai/sqlite";
+import { ReactNativeAdapter } from "@dqcai/sqlite";
+import { NodeJSAdapter } from "@dqcai/sqlite";
+
+// Đăng ký cả hai adapter - thư viện sẽ tự chọn adapter phù hợp
+DatabaseFactory.registerAdapter(new ReactNativeAdapter());
+DatabaseFactory.registerAdapter(new NodeJSAdapter());
+
+// Kiểm tra môi trường hiện tại
+console.log("Environment:", DatabaseFactory.getEnvironmentInfo());
+```
+
+## 3. Quản lý Database với DatabaseManager
+
+### Khai báo Schema
+
+```typescript
+import { DatabaseSchema, SQLITE_TYPE_MAPPING } from "@dqcai/sqlite";
+
+const coreSchema: DatabaseSchema = {
+  version: "v1",
+  database_name: "core.db",
+  description: "Core database schema",
+  type_mapping: SQLITE_TYPE_MAPPING,
   schemas: {
     users: {
-      description: "User accounts",
+      description: "User management table",
       cols: [
         {
           name: "id",
-          type: "integer",
-          primary_key: true,
-          auto_increment: true
+          type: "uuid",
+          constraints: "NOT NULL UNIQUE PRIMARY KEY",
         },
         {
           name: "username",
           type: "varchar",
           length: 50,
-          nullable: false,
-          unique: true
+          constraints: "NOT NULL UNIQUE",
         },
         {
           name: "email",
-          type: "varchar", 
-          length: 100,
-          nullable: false,
-          unique: true
-        },
-        {
-          name: "password",
-          type: "varchar",
-          length: 255,
-          nullable: false
+          type: "email",
+          constraints: "UNIQUE",
         },
         {
           name: "created_at",
-          type: "datetime",
-          nullable: false,
-          default: "CURRENT_TIMESTAMP"
-        }
+          type: "timestamp",
+          constraints: "DEFAULT CURRENT_TIMESTAMP",
+        },
       ],
       indexes: [
         {
-          name: "idx_username",
+          name: "idx_users_username",
           columns: ["username"],
-          unique: true
-        }
-      ]
-    },
-    posts: {
-      description: "User posts",
-      cols: [
-        { name: "id", type: "integer", primary_key: true, auto_increment: true },
-        { name: "user_id", type: "integer", nullable: false },
-        { name: "title", type: "varchar", length: 200 },
-        { name: "content", type: "text" },
-        { name: "created_at", type: "datetime", default: "CURRENT_TIMESTAMP" }
+          unique: true,
+        },
       ],
-      foreign_keys: [
-        {
-          name: "fk_post_user",
-          column: "user_id",
-          references: { table: "users", column: "id" },
-          on_delete: "CASCADE"
-        }
-      ]
-    }
-  }
-};
-```
-
-## ⚡ Advanced Features
-
-### Transaction Management
-```typescript
-// Single table transaction
-await userService.executeTransaction(async () => {
-  const user = await userService.create({ username: 'john', email: 'john@test.com' });
-  await userService.update(user.id, { username: 'johnny' });
-});
-
-// Cross-schema transaction
-await DatabaseManager.executeCrossSchemaTransaction(['users', 'posts'], async (daos) => {
-  const user = await daos.users.execute('INSERT INTO users ...');
-  await daos.posts.execute('INSERT INTO posts ...');
-});
-```
-
-### Query Builder
-```typescript
-const users = await userService.queryBuilder()
-  .select(['id', 'username', 'email'])
-  .where('created_at', '>', '2024-01-01')
-  .orderBy('username', 'ASC')
-  .limit(10)
-  .execute();
-```
-
-### Batch Operations
-```typescript
-const users = [
-  { username: 'user1', email: 'user1@test.com' },
-  { username: 'user2', email: 'user2@test.com' }
-];
-
-await userService.batchCreate(users);
-```
-
-### Real-time Monitoring
-```typescript
-import { ServiceHealthMonitor } from '@dqcai/sqlite';
-
-const monitor = new ServiceHealthMonitor();
-monitor.startMonitoring(30000); // Check every 30 seconds
-
-// Get health status
-const healthReport = await serviceManager.healthCheck();
-console.log(`System health: ${healthReport.overallHealth ? 'Healthy' : 'Unhealthy'}`);
-```
-
-## 🎯 Use Cases
-
-- **Mobile Apps**: React Native applications with offline-first data storage
-- **Desktop Apps**: Electron applications with embedded database
-- **Web Applications**: Browser-based apps with client-side data storage
-- **Server Applications**: Node.js backends with SQLite database
-- **Edge Computing**: Lightweight applications for edge deployment
-- **Microservices**: Small, focused services with embedded databases
-
-## 🔍 SEO Keywords
-
-**SQLite JavaScript**, **TypeScript SQLite**, **React Native SQLite**, **Node.js SQLite**, **Universal SQLite**, **Cross-platform database**, **SQLite ORM**, **Database service management**, **TypeScript database library**, **JavaScript database**, **Mobile database**, **Offline database**, **SQLite migrations**, **Database transactions**, **SQLite schema management**, **Logger integration**, **Debug SQLite**, **Database logging**
-
-## 📊 Performance Benchmarks
-
-- **Connection pooling** reduces connection overhead by 80%
-- **Batch operations** improve write performance by 10x
-- **Query optimization** reduces query time by 60%
-- **Service caching** eliminates repeated initialization costs
-
-## 🛡️ Production Ready
-
-- **Error handling**: Comprehensive error management with retry mechanisms
-- **Health monitoring**: Real-time service health checks and auto-recovery
-- **Performance optimization**: Built-in query optimization and connection pooling
-- **Memory management**: Automatic cleanup of unused services
-- **Graceful shutdown**: Proper resource cleanup on application termination
-- **Comprehensive logging**: Integrated logger for debugging and monitoring
-
-## 🔄 Migration Support
-
-```typescript
-// Define migration
-const migration = {
-  version: '1.0.1',
-  description: 'Add user status column',
-  
-  async up(dao) {
-    await dao.execute('ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT "active"');
+    },
   },
-  
-  async down(dao) {
-    // Rollback logic
-  }
 };
-
-// Run migration
-await migrationManager.runMigration(migration);
 ```
 
-## 📱 React Native Example
+### Đăng ký Schema và khởi tạo Database
 
 ```typescript
-// App.tsx
-import React, { useEffect, useState } from 'react';
-import { DatabaseService } from './services/DatabaseService';
+import { DatabaseManager } from "@dqcai/sqlite";
 
-export default function App() {
-  const [users, setUsers] = useState([]);
+// Đăng ký schema
+DatabaseManager.registerSchema("core", coreSchema);
 
-  useEffect(() => {
-    initDatabase();
-  }, []);
+// Khởi tạo kết nối core database
+await DatabaseManager.initializeCoreConnection();
 
-  const initDatabase = async () => {
-    await DatabaseService.initialize();
-    const userService = await ServiceManager.getService('users', 'users');
-    const allUsers = await userService.getAllUsers();
-    setUsers(allUsers);
-  };
+// Lazy loading cho database khác
+const dao = await DatabaseManager.getLazyLoading("core");
+```
 
-  // Your UI here
+### Quản lý kết nối theo Role
+
+```typescript
+// Đăng ký role configuration
+DatabaseManager.registerRole({
+  roleName: "admin",
+  requiredDatabases: ["core", "inventory"],
+  optionalDatabases: ["reports"],
+  priority: 1,
+});
+
+// Set user roles - tự động khởi tạo databases cần thiết
+await DatabaseManager.setCurrentUserRoles(["admin"]);
+
+// Lấy database đã được khởi tạo
+const coreDao = DatabaseManager.get("core");
+```
+
+## 4. Định nghĩa Service từ BaseService
+
+### Service đơn giản (sử dụng DefaultService)
+
+```typescript
+import { BaseService } from "@dqcai/sqlite";
+
+// Sử dụng BaseService trực tiếp cho CRUD cơ bản
+const userService = new BaseService("core", "users");
+await userService.init();
+```
+
+### Service mở rộng với logic nghiệp vụ
+
+```typescript
+import { BaseService } from "@dqcai/sqlite";
+
+export class UserService extends BaseService<User> {
+  constructor() {
+    super("core", "users");
+    this.setPrimaryKeyFields(["id"]);
+  }
+
+  // Business logic method
+  async findByStoreId(storeId: string): Promise<User[]> {
+    await this._ensureInitialized();
+    return await this.findAll({ store_id: storeId });
+  }
+
+  async findActiveUsers(): Promise<User[]> {
+    await this._ensureInitialized();
+    return await this.findAll({ is_active: true });
+  }
+
+  async updateLastLogin(userId: string): Promise<void> {
+    await this._ensureInitialized();
+    await this.update(userId, {
+      last_login: new Date().toISOString(),
+    });
+  }
+
+  async lockUser(userId: string, duration: number): Promise<void> {
+    await this._ensureInitialized();
+    const lockedUntil = new Date(Date.now() + duration);
+    await this.update(userId, {
+      is_active: false,
+      locked_until: lockedUntil.toISOString(),
+    });
+  }
 }
 ```
 
-## 🖥️ Node.js Example
+### Service với validation và events
 
 ```typescript
-// server.js
-import express from 'express';
-import { DatabaseService } from './services/DatabaseService';
+export class StoreService extends BaseService<Store> {
+  constructor() {
+    super("core", "stores");
+    this.setupEventHandlers();
+  }
 
-const app = express();
+  private setupEventHandlers() {
+    // Lắng nghe events
+    this.on("dataCreated", (event) => {
+      console.log("Store created:", event.data);
+    });
 
-app.get('/users', async (req, res) => {
-  const userService = await ServiceManager.getService('users', 'users');
-  const users = await userService.getAllUsers();
-  res.json(users);
+    this.on("dataUpdated", (event) => {
+      console.log("Store updated:", event.id);
+    });
+
+    // Custom error handler
+    this.setErrorHandler("CREATE_ERROR", (error) => {
+      console.error("Failed to create store:", error.message);
+    });
+  }
+
+  // Override create để thêm validation
+  async create(data: Partial<Store>): Promise<Store | null> {
+    // Validate
+    if (!data.enterprise_id) {
+      throw new Error("Enterprise ID is required");
+    }
+    if (!data.name?.trim()) {
+      throw new Error("Store name is required");
+    }
+
+    // Set defaults
+    data.currency = data.currency || "VND";
+    data.timezone = data.timezone || "Asia/Ho_Chi_Minh";
+    data.status = data.status || "active";
+
+    return await super.create(data);
+  }
+
+  async findByEnterpriseId(enterpriseId: string): Promise<Store[]> {
+    return await this.findAll({ enterprise_id: enterpriseId });
+  }
+
+  async getActiveStores(enterpriseId: string): Promise<Store[]> {
+    return await this.findAll(
+      { enterprise_id: enterpriseId, status: "active" },
+      { orderBy: [{ name: "name", direction: "ASC" }] }
+    );
+  }
+}
+```
+
+## 5. Quản lý Service với ServiceManager
+
+### Đăng ký Services
+
+```typescript
+import { ServiceManager } from "@dqcai/sqlite";
+import { UserService } from "./services/UserService";
+import { StoreService } from "./services/StoreService";
+
+const serviceManager = ServiceManager.getInstance();
+
+// Đăng ký service với custom class
+serviceManager.registerService({
+  schemaName: "core",
+  tableName: "users",
+  primaryKeyFields: ["id"],
+  serviceClass: UserService,
 });
 
-// Initialize database before starting server
-await DatabaseService.initialize();
-app.listen(3000);
+serviceManager.registerService({
+  schemaName: "core",
+  tableName: "stores",
+  serviceClass: StoreService,
+});
+
+// Đăng ký nhiều services cùng lúc
+serviceManager.registerServices([
+  {
+    schemaName: "core",
+    tableName: "enterprises",
+    primaryKeyFields: ["id"],
+  },
+  {
+    schemaName: "core",
+    tableName: "settings",
+    primaryKeyFields: ["id"],
+  },
+]);
 ```
+
+### Lấy và sử dụng Service
+
+```typescript
+// Lấy service - tự động khởi tạo nếu chưa tồn tại
+const userService = (await serviceManager.getService(
+  "core",
+  "users"
+)) as UserService;
+
+// Khởi tạo service ngay lập tức
+const storeService = await serviceManager.initializeService("core", "stores");
+
+// Lấy service đã tồn tại (không tự động tạo)
+const existingService = serviceManager.getExistingService("core", "users");
+```
+
+### Quản lý lifecycle
+
+```typescript
+// Kiểm tra sức khỏe tất cả services
+const healthReport = await serviceManager.healthCheck();
+console.log("Overall health:", healthReport.overallHealth);
+console.log("Healthy services:", healthReport.healthyServices);
+
+// Lấy thông tin services
+const allServices = serviceManager.getAllServiceInfo();
+console.log("Total services:", allServices.length);
+
+// Destroy service
+await serviceManager.destroyService("core", "users");
+
+// Destroy tất cả services trong một schema
+await serviceManager.destroyServicesBySchema("core");
+```
+
+## 6. Thực thi CRUD và Logic nghiệp vụ
+
+### CRUD cơ bản
+
+```typescript
+// Create
+const newUser = await userService.create({
+  id: crypto.randomUUID(),
+  username: "john_doe",
+  email: "john@example.com",
+  full_name: "John Doe",
+  store_id: storeId,
+  role: "staff",
+});
+
+// Read
+const user = await userService.findById(userId);
+const allUsers = await userService.findAll();
+const activeUsers = await userService.findAll({ is_active: true });
+
+// Update
+await userService.update(userId, {
+  email: "newemail@example.com",
+  updated_at: new Date().toISOString(),
+});
+
+// Delete
+await userService.delete(userId);
+
+// Count
+const userCount = await userService.count({ is_active: true });
+
+// Exists
+const exists = await userService.exists(userId);
+```
+
+### Query nâng cao
+
+```typescript
+// Tìm kiếm với options
+const users = await userService.findAll(
+  { role: "staff", is_active: true },
+  {
+    orderBy: [{ name: "created_at", direction: "DESC" }],
+    limit: 10,
+    offset: 0,
+    columns: ["id", "username", "email", "full_name"],
+  }
+);
+
+// Pagination
+const page = 1;
+const perPage = 20;
+const offset = (page - 1) * perPage;
+
+const paginatedUsers = await userService.findAll(
+  {},
+  { limit: perPage, offset }
+);
+```
+
+### Bulk operations
+
+```typescript
+// Bulk insert
+const users = [
+  {
+    id: uuid(),
+    username: "user1",
+    email: "user1@example.com",
+    store_id: storeId,
+  },
+  {
+    id: uuid(),
+    username: "user2",
+    email: "user2@example.com",
+    store_id: storeId,
+  },
+];
+
+const importResult = await userService.bulkInsert(users);
+console.log(`Imported ${importResult.successRows} users`);
+
+// Bulk create with transaction
+const createdUsers = await userService.bulkCreate(users);
+```
+
+### Transaction
+
+```typescript
+// Single service transaction
+await userService.executeTransaction(async () => {
+  await userService.create(user1);
+  await userService.create(user2);
+  await userService.update(userId, { status: "active" });
+});
+
+// Cross-service transaction (same schema)
+await serviceManager.executeSchemaTransaction("core", async (services) => {
+  const [userSvc, storeSvc] = services;
+
+  const store = await storeSvc.create(storeData);
+  await userSvc.create({
+    ...userData,
+    store_id: store.id,
+  });
+});
+```
+
+### Import/Export
+
+```typescript
+// Import from CSV
+const csvData = `username,email,role
+john,john@example.com,staff
+jane,jane@example.com,manager`;
+
+const result = await userService.importFromCSV(csvData, {
+  hasHeader: true,
+  delimiter: ",",
+  skipErrors: false,
+});
+
+// Import with column mapping
+const columnMappings = [
+  { sourceColumn: "user_name", targetColumn: "username" },
+  { sourceColumn: "mail", targetColumn: "email" },
+  {
+    sourceColumn: "created",
+    targetColumn: "created_at",
+    transform: (value) => new Date(value).toISOString(),
+  },
+];
+
+await userService.importDataWithMapping(data, columnMappings);
+```
+
+## 7. Ví dụ hoàn chỉnh với Core Schema
+
+```typescript
+import {
+  DatabaseFactory,
+  DatabaseManager,
+  ServiceManager,
+  BaseService,
+} from "@dqcai/sqlite";
+import { NodeJSAdapter } from "@dqcai/sqlite";
+import { coreSchema } from "./schemas/core";
+
+// ========== BƯỚC 1: Setup Adapters ==========
+DatabaseFactory.registerAdapter(new NodeJSAdapter());
+
+// ========== BƯỚC 2: Đăng ký Schemas ==========
+DatabaseManager.registerSchema("core", coreSchema);
+
+// ========== BƯỚC 3: Định nghĩa Services ==========
+class UserService extends BaseService {
+  constructor() {
+    super("core", "users");
+  }
+
+  async findByStoreId(storeId: string) {
+    return await this.findAll({ store_id: storeId });
+  }
+
+  async authenticate(username: string, password: string) {
+    const user = await this.findFirst({ username });
+    if (!user) return null;
+
+    // Verify password (simplified)
+    if (user.password_hash === password) {
+      await this.update(user.id, {
+        last_login: new Date().toISOString(),
+        failed_login_attempts: 0,
+      });
+      return user;
+    }
+
+    // Increment failed attempts
+    await this.update(user.id, {
+      failed_login_attempts: (user.failed_login_attempts || 0) + 1,
+    });
+
+    return null;
+  }
+}
+
+class StoreService extends BaseService {
+  constructor() {
+    super("core", "stores");
+  }
+
+  async findByEnterpriseId(enterpriseId: string) {
+    return await this.findAll({ enterprise_id: enterpriseId });
+  }
+
+  async getActiveStores(enterpriseId: string) {
+    return await this.findAll(
+      { enterprise_id: enterpriseId, status: "active" },
+      { orderBy: [{ name: "name", direction: "ASC" }] }
+    );
+  }
+}
+
+// ========== BƯỚC 4: Đăng ký Services ==========
+const serviceManager = ServiceManager.getInstance();
+
+serviceManager.registerServices([
+  {
+    schemaName: "core",
+    tableName: "enterprises",
+  },
+  {
+    schemaName: "core",
+    tableName: "stores",
+    serviceClass: StoreService,
+  },
+  {
+    schemaName: "core",
+    tableName: "users",
+    serviceClass: UserService,
+  },
+]);
+
+// ========== BƯỚC 5: Khởi tạo và sử dụng ==========
+async function main() {
+  try {
+    // Khởi tạo core database
+    await DatabaseManager.initializeCoreConnection();
+
+    // Lấy services
+    const enterpriseService = await serviceManager.getService(
+      "core",
+      "enterprises"
+    );
+    const storeService = (await serviceManager.getService(
+      "core",
+      "stores"
+    )) as StoreService;
+    const userService = (await serviceManager.getService(
+      "core",
+      "users"
+    )) as UserService;
+
+    // ========== TEST CRUD Operations ==========
+
+    // 1. Create Enterprise
+    const enterprise = await enterpriseService.create({
+      id: crypto.randomUUID(),
+      name: "My Company",
+      business_type: "ltd",
+      email: "contact@mycompany.com",
+      status: "active",
+      subscription_plan: "premium",
+    });
+    console.log("✅ Enterprise created:", enterprise?.name);
+
+    // 2. Create Store
+    const store = await storeService.create({
+      id: crypto.randomUUID(),
+      enterprise_id: enterprise!.id,
+      name: "Main Store",
+      store_type: "retail",
+      address: "123 Main St",
+      status: "active",
+    });
+    console.log("✅ Store created:", store?.name);
+
+    // 3. Create Users
+    const users = [
+      {
+        id: crypto.randomUUID(),
+        store_id: store!.id,
+        username: "admin",
+        password_hash: "hashed_password",
+        full_name: "Admin User",
+        email: "admin@mycompany.com",
+        role: "admin",
+        is_active: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        store_id: store!.id,
+        username: "staff1",
+        password_hash: "hashed_password",
+        full_name: "Staff One",
+        email: "staff1@mycompany.com",
+        role: "staff",
+        is_active: true,
+      },
+    ];
+
+    const importResult = await userService.bulkInsert(users);
+    console.log(`✅ Users imported: ${importResult.successRows} successful`);
+
+    // 4. Query data
+    const allUsers = await userService.findByStoreId(store!.id);
+    console.log(`✅ Users in store: ${allUsers.length}`);
+
+    const activeStores = await storeService.getActiveStores(enterprise!.id);
+    console.log(`✅ Active stores: ${activeStores.length}`);
+
+    // 5. Update
+    await userService.update(users[0].id, {
+      last_login: new Date().toISOString(),
+    });
+    console.log("✅ User login updated");
+
+    // 6. Transaction example
+    await serviceManager.executeSchemaTransaction("core", async (services) => {
+      const [entSvc, storeSvc, userSvc] = services;
+
+      // Create another store and user in transaction
+      const newStore = await storeSvc.create({
+        id: crypto.randomUUID(),
+        enterprise_id: enterprise!.id,
+        name: "Branch Store",
+        status: "active",
+      });
+
+      await userSvc.create({
+        id: crypto.randomUUID(),
+        store_id: newStore.id,
+        username: "branch_manager",
+        password_hash: "hashed_password",
+        full_name: "Branch Manager",
+        email: "manager@branch.com",
+        role: "manager",
+        is_active: true,
+      });
+    });
+    console.log("✅ Transaction completed");
+
+    // 7. Health check
+    const health = await serviceManager.healthCheck();
+    console.log("✅ System health:", health.overallHealth);
+    console.log(
+      `   Healthy services: ${health.healthyServices}/${health.totalServices}`
+    );
+
+    // 8. Statistics
+    const enterpriseCount = await enterpriseService.count();
+    const storeCount = await storeService.count();
+    const userCount = await userService.count();
+
+    console.log("\n📊 Statistics:");
+    console.log(`   Enterprises: ${enterpriseCount}`);
+    console.log(`   Stores: ${storeCount}`);
+    console.log(`   Users: ${userCount}`);
+  } catch (error) {
+    console.error("❌ Error:", error);
+  } finally {
+    // Cleanup
+    await DatabaseManager.closeAll();
+    console.log("\n✅ Database connections closed");
+  }
+}
+
+// Run test
+main().catch(console.error);
+```
+
+### Kết quả mong đợi:
+
+```
+✅ Enterprise created: My Company
+✅ Store created: Main Store
+✅ Users imported: 2 successful
+✅ Users in store: 2
+✅ Active stores: 1
+✅ User login updated
+✅ Transaction completed
+✅ System health: true
+   Healthy services: 3/3
+
+📊 Statistics:
+   Enterprises: 1
+   Stores: 2
+   Users: 3
+
+✅ Database connections closed
+```
+
+## Tổng kết
+
+Thư viện @dqcai/sqlite cung cấp:
+
+- ✅ **Cross-platform**: Hỗ trợ React Native và Node.js
+- ✅ **Type-safe**: TypeScript support đầy đủ
+- ✅ **Schema-driven**: Quản lý database qua JSON schema
+- ✅ **Service-based**: Architecture rõ ràng, dễ mở rộng
+- ✅ **Lazy loading**: Tối ưu performance trên mobile
+- ✅ **Transaction support**: ACID compliance
+- ✅ **Event system**: Lắng nghe và xử lý events
+- ✅ **Import/Export**: CSV, JSON, bulk operations
+- ✅ **Logging**: Tích hợp @dqcai/logger để trace/debug
 
 ## 🤝 Community & Support
 

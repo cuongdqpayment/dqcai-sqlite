@@ -96,7 +96,7 @@ export type ForeignKeyAction =
   | "NO ACTION"
   | undefined;
 
-/* export interface ForeignKeyDefinition {
+export interface ForeignKeyDefinition {
   name: string;
   columns: string[];
   references: {
@@ -106,29 +106,7 @@ export type ForeignKeyAction =
   on_delete?: string | ForeignKeyAction;
   on_update?: string | ForeignKeyAction;
   description?: string;
-} */
-
-/**
- * Foreign key definition
- */
-interface ReferencesBase {
-  table: string;
 }
-type References = ReferencesBase &
-  ({ column: string; columns?: never } | { column?: never; columns: string[] });
-
-// Định nghĩa base cho ForeignKeyDefinition
-interface ForeignKeyDefinitionBase {
-  name: string;
-  references: References;
-  on_delete?: string | ForeignKeyAction;
-  on_update?: string | ForeignKeyAction;
-  description?: string;
-}
-
-// Ràng buộc ForeignKeyDefinition phải có ít nhất field hoặc fields
-export type ForeignKeyDefinition = ForeignKeyDefinitionBase &
-  ({ column: string; columns?: never } | { column?: never; columns: string[] });
 
 export interface TableDefinition {
   name: string;

@@ -10,6 +10,7 @@ import {
 const APPModules = {
   ...CommonModules,
   TEST_ORM: "Test-ORM",
+  TEST_DAO: "Test-DAO",
 };
 
 const config = new LoggerConfigBuilder()

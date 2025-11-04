@@ -1,8 +1,8 @@
 // src/core/database-factory.ts
 import { SQLiteAdapter, DatabaseSchema, DbFactoryOptions } from "../types";
 import { UniversalDAO } from "./universal-dao";
-import { createModuleLogger, SQLiteModules } from "../logger";
 
+import { createModuleLogger, SQLiteModules } from "../logger";
 const logger = createModuleLogger(SQLiteModules.DATABASE_FACTORY);
 
 /**

@@ -18,6 +18,7 @@ import {
 
 // Import logger configuration for internal use
 import { SQLiteModules, createModuleLogger } from "../logger";
+const logger = createModuleLogger(SQLiteModules.UNIVERSAL_DAO);
 
 export class UniversalDAO {
   private connection: SQLiteConnection | null = null;
@@ -26,7 +27,6 @@ export class UniversalDAO {
   private typeMappingConfig: TypeMappingConfig["type_mapping"] | null = null;
   private createIfNotExists: boolean = false;
   private forceRecreate: boolean = false;
-  private logger = createModuleLogger(SQLiteModules.UNIVERSAL_DAO);
 
   constructor(
     private adapter: SQLiteAdapter,
@@ -39,7 +39,7 @@ export class UniversalDAO {
     this.createIfNotExists = options?.createIfNotExists ?? false;
     this.forceRecreate = options?.forceRecreate ?? false;
 
-    this.logger.trace("UniversalDAO constructor initialized", {
+    logger.trace("UniversalDAO constructor initialized", {
       dbPath: this.dbPath,
       createIfNotExists: this.createIfNotExists,
       forceRecreate: this.forceRecreate,
@@ -47,23 +47,23 @@ export class UniversalDAO {
   }
 
   async connect(): Promise<void> {
-    this.logger.trace("Attempting to connect to database", {
+    logger.trace("Attempting to connect to database", {
       dbPath: this.dbPath,
     });
 
     if (this.isConnected) {
-      this.logger.debug("Already connected to database, skipping connection");
+      logger.debug("Already connected to database, skipping connection");
       return;
     }
 
     try {
       this.connection = await this.adapter.connect(this.dbPath);
       this.isConnected = true;
-      this.logger.info("Successfully connected to database", {
+      logger.info("Successfully connected to database", {
         dbPath: this.dbPath,
       });
     } catch (error) {
-      this.logger.error("Failed to connect to database", {
+      logger.error("Failed to connect to database", {
         dbPath: this.dbPath,
         error: error instanceof Error ? error.message : error,
       });
@@ -72,45 +72,45 @@ export class UniversalDAO {
   }
 
   async disconnect(): Promise<void> {
-    this.logger.trace("Attempting to disconnect from database");
+    logger.trace("Attempting to disconnect from database");
 
     if (this.connection && this.isConnected) {
       try {
         await this.connection.close();
         this.connection = null;
         this.isConnected = false;
-        this.logger.info("Successfully disconnected from database");
+        logger.info("Successfully disconnected from database");
       } catch (error) {
-        this.logger.error("Error during database disconnection", {
+        logger.error("Error during database disconnection", {
           error: error instanceof Error ? error.message : error,
         });
         throw error;
       }
     } else {
-      this.logger.debug("Database was not connected, nothing to disconnect");
+      logger.debug("Database was not connected, nothing to disconnect");
     }
   }
 
   async close(): Promise<void> {
-    this.logger.trace("Closing database connection");
+    logger.trace("Closing database connection");
     await this.disconnect();
   }
 
   // Type mapping utilities
   setTypeMappingConfig(config: TypeMappingConfig["type_mapping"]): void {
-    this.logger.trace("Setting type mapping configuration", { config });
+    logger.trace("Setting type mapping configuration", { config });
     this.typeMappingConfig = config;
-    this.logger.debug("Type mapping configuration updated");
+    logger.debug("Type mapping configuration updated");
   }
 
   private convertToSQLiteType(genericType: string): string {
-    this.logger.trace("Converting generic type to SQLite type", {
+    logger.trace("Converting generic type to SQLite type", {
       genericType,
     });
 
     if (!this.typeMappingConfig || !this.typeMappingConfig.sqlite) {
       const defaultType = this.getDefaultSQLiteType(genericType);
-      this.logger.debug("Using default type mapping", {
+      logger.debug("Using default type mapping", {
         genericType,
         sqliteType: defaultType,
       });
@@ -119,7 +119,7 @@ export class UniversalDAO {
 
     const sqliteMapping = this.typeMappingConfig.sqlite;
     const mappedType = sqliteMapping[genericType.toLowerCase()] || "TEXT";
-    this.logger.debug("Using custom type mapping", {
+    logger.debug("Using custom type mapping", {
       genericType,
       sqliteType: mappedType,
     });
@@ -156,7 +156,7 @@ export class UniversalDAO {
   }
 
   private processColumnDefinition(col: ColumnDefinition): ColumnDefinition {
-    this.logger.trace("Processing column definition", {
+    logger.trace("Processing column definition", {
       columnName: col.name,
       originalType: col.type,
     });
@@ -166,7 +166,7 @@ export class UniversalDAO {
 
     const options: string[] = [];
     if (col.constraints) {
-      this.logger.trace("Processing column constraints", {
+      logger.trace("Processing column constraints", {
         columnName: col.name,
         constraints: col.constraints,
       });
@@ -201,7 +201,7 @@ export class UniversalDAO {
     }
 
     processedCol.option_key = options.join(" ").trim();
-    this.logger.debug("Column definition processed", {
+    logger.debug("Column definition processed", {
       columnName: col.name,
       finalType: processedCol.type,
       options: processedCol.option_key,
@@ -212,7 +212,7 @@ export class UniversalDAO {
 
   // Schema initialization with enhanced options
   async initializeFromSchema(schema: DatabaseSchema): Promise<void> {
-    this.logger.info("Initializing database schema", {
+    logger.info("Initializing database schema", {
       schemaVersion: schema.version,
       tableCount: Object.keys(schema.schemas).length,
     });
@@ -227,12 +227,12 @@ export class UniversalDAO {
       );
       hasExistingSchema = result.rows.length > 0;
       if (hasExistingSchema) {
-        this.logger.debug("Existing schema detected", {
+        logger.debug("Existing schema detected", {
           currentVersion: result.rows[0]?.version,
         });
       }
     } catch (error) {
-      this.logger.debug(
+      logger.debug(
         "The first time for init from Schema! No existing schema detected"
       );
       hasExistingSchema = false;
@@ -240,7 +240,7 @@ export class UniversalDAO {
 
     // Handle existing schema based on options
     if (hasExistingSchema && !this.createIfNotExists && !this.forceRecreate) {
-      this.logger.info(
+      logger.info(
         "Schema exists and no recreation options set, using existing schema"
       );
       if (schema.type_mapping) {
@@ -250,7 +250,7 @@ export class UniversalDAO {
     }
 
     if (hasExistingSchema && this.forceRecreate) {
-      this.logger.warn(
+      logger.warn(
         "Force recreate option enabled, dropping all existing tables"
       );
       await this.dropAllTables();
@@ -261,10 +261,10 @@ export class UniversalDAO {
     }
 
     try {
-      this.logger.debug("Enabling foreign key constraints");
+      logger.debug("Enabling foreign key constraints");
       await this.execute("PRAGMA foreign_keys = ON");
     } catch (error) {
-      this.logger.warn("Failed to enable foreign key constraints", {
+      logger.warn("Failed to enable foreign key constraints", {
         error: error instanceof Error ? error.message : error,
       });
     }
@@ -272,9 +272,9 @@ export class UniversalDAO {
     await this.beginTransaction();
 
     try {
-      this.logger.info("Creating tables from schema");
+      logger.info("Creating tables from schema");
       for (const [tableName, tableConfig] of Object.entries(schema.schemas)) {
-        this.logger.debug("Creating table", {
+        logger.debug("Creating table", {
           tableName,
           columnCount: tableConfig.cols.length,
         });
@@ -291,10 +291,10 @@ export class UniversalDAO {
         await this.createTableWithForeignKeys(tableDefinition);
       }
 
-      this.logger.info("Creating indexes for tables");
+      logger.info("Creating indexes for tables");
       for (const [tableName, tableConfig] of Object.entries(schema.schemas)) {
         if (tableConfig.indexes?.length) {
-          this.logger.debug("Creating indexes for table", {
+          logger.debug("Creating indexes for table", {
             tableName,
             indexCount: tableConfig.indexes.length,
           });
@@ -304,29 +304,26 @@ export class UniversalDAO {
 
       await this.setSchemaVersion(schema.version);
       await this.commitTransaction();
-      this.logger.info("Schema initialization completed successfully", {
+      logger.info("Schema initialization completed successfully", {
         version: schema.version,
       });
     } catch (error) {
-      this.logger.error(
-        "Schema initialization failed, rolling back transaction",
-        {
-          error: error instanceof Error ? error.message : error,
-        }
-      );
+      logger.error("Schema initialization failed, rolling back transaction", {
+        error: error instanceof Error ? error.message : error,
+      });
       await this.rollbackTransaction();
       throw error;
     }
   }
 
   private async dropAllTables(): Promise<void> {
-    this.logger.info("Dropping all existing tables");
+    logger.info("Dropping all existing tables");
 
     const tables = await this.execute(
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
     );
 
-    this.logger.debug("Found tables to drop", {
+    logger.debug("Found tables to drop", {
       tableCount: tables.rows.length,
     });
 
@@ -334,13 +331,13 @@ export class UniversalDAO {
 
     try {
       for (const table of tables.rows) {
-        this.logger.trace("Dropping table", { tableName: table.name });
+        logger.trace("Dropping table", { tableName: table.name });
         await this.execute(`DROP TABLE IF EXISTS ${table.name}`);
       }
       await this.commitTransaction();
-      this.logger.info("All tables dropped successfully");
+      logger.info("All tables dropped successfully");
     } catch (error) {
-      this.logger.error("Failed to drop tables, rolling back", {
+      logger.error("Failed to drop tables, rolling back", {
         error: error instanceof Error ? error.message : error,
       });
       await this.rollbackTransaction();
@@ -351,7 +348,7 @@ export class UniversalDAO {
   private async createTableWithForeignKeys(
     table: TableDefinition
   ): Promise<void> {
-    this.logger.trace("Creating table with foreign keys", {
+    logger.trace("Creating table with foreign keys", {
       tableName: table.name,
     });
 
@@ -365,22 +362,21 @@ export class UniversalDAO {
     const foreignKeys = table.foreign_keys;
 
     if (foreignKeys) {
-      this.logger.debug("Processing foreign keys", {
+      logger.debug("Processing foreign keys", {
         tableName: table.name,
         fkCount: foreignKeys.length,
       });
 
       for (const fk of foreignKeys) {
         // Lấy column(s) - hỗ trợ cả snake_case và camelCase, số ít và số nhiều
-        const columns: string[] =
-          fk.columns || fk.column
-            ? Array.isArray(fk.columns || fk.column)
-              ? ((fk.columns || fk.column) as any)
-              : [fk.columns || fk.column]
-            : [];
+        const columns: string[] = fk.columns
+          ? Array.isArray(fk.columns)
+            ? (fk.columns as any)
+            : [fk.columns]
+          : [];
 
         if (columns.length === 0) {
-          this.logger.warn("Foreign key without columns found", {
+          logger.warn("Foreign key without columns found", {
             tableName: table.name,
             foreignKey: fk,
           });
@@ -391,21 +387,20 @@ export class UniversalDAO {
         const refTable = fk.references?.table;
 
         // Lấy reference column(s) - hỗ trợ cả số ít và số nhiều
-        const refColumns: string[] =
-          fk.references?.columns || fk.references?.column
-            ? Array.isArray(fk.references?.columns || fk.references?.column)
-              ? ((fk.references?.columns || fk.references?.column) as any)
-              : [fk.references?.columns || fk.references?.column]
-            : [];
+        const refColumns: string[] = fk.references?.columns
+          ? Array.isArray(fk.references?.columns)
+            ? (fk.references?.columns as any)
+            : [fk.references?.columns]
+          : [];
 
         if (!refTable || refColumns.length === 0) {
-          this.logger.warn("Invalid foreign key reference", {
+          logger.warn("Invalid foreign key reference", {
             tableName: table.name,
             foreignKey: fk,
           });
           continue;
         }
-        
+
         // Tạo foreign key SQL
         let fkSql = `FOREIGN KEY (${columns.join(
           ", "
@@ -429,11 +424,11 @@ export class UniversalDAO {
 
     try {
       await this.execute(sql);
-      this.logger.debug("Table created successfully", {
+      logger.debug("Table created successfully", {
         tableName: table.name,
       });
     } catch (error) {
-      this.logger.error("Failed to create table", {
+      logger.error("Failed to create table", {
         tableName: table.name,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -446,7 +441,7 @@ export class UniversalDAO {
     tableName: string,
     indexes: IndexDefinition[]
   ): Promise<void> {
-    this.logger.trace("Creating indexes for table", {
+    logger.trace("Creating indexes for table", {
       tableName,
       indexCount: indexes.length,
     });
@@ -460,14 +455,14 @@ export class UniversalDAO {
 
       try {
         await this.execute(sql);
-        this.logger.debug("Index created successfully", {
+        logger.debug("Index created successfully", {
           indexName: index.name,
           tableName,
           columns: index.columns,
           unique: isUnique,
         });
       } catch (error) {
-        this.logger.error("Failed to create index", {
+        logger.error("Failed to create index", {
           indexName: index.name,
           tableName,
           sql,
@@ -480,20 +475,20 @@ export class UniversalDAO {
 
   // Transaction management
   async beginTransaction(): Promise<void> {
-    this.logger.trace("Beginning transaction");
+    logger.trace("Beginning transaction");
 
     if (this.inTransaction) {
       const error = new Error("Transaction already in progress");
-      this.logger.error("Cannot begin transaction", { error: error.message });
+      logger.error("Cannot begin transaction", { error: error.message });
       throw error;
     }
 
     try {
       await this.execute("BEGIN TRANSACTION");
       this.inTransaction = true;
-      this.logger.debug("Transaction started successfully");
+      logger.debug("Transaction started successfully");
     } catch (error) {
-      this.logger.error("Failed to begin transaction", {
+      logger.error("Failed to begin transaction", {
         error: error instanceof Error ? error.message : error,
       });
       throw error;
@@ -501,20 +496,20 @@ export class UniversalDAO {
   }
 
   async commitTransaction(): Promise<void> {
-    this.logger.trace("Committing transaction");
+    logger.trace("Committing transaction");
 
     if (!this.inTransaction) {
       const error = new Error("No transaction in progress");
-      this.logger.error("Cannot commit transaction", { error: error.message });
+      logger.error("Cannot commit transaction", { error: error.message });
       throw error;
     }
 
     try {
       await this.execute("COMMIT");
       this.inTransaction = false;
-      this.logger.debug("Transaction committed successfully");
+      logger.debug("Transaction committed successfully");
     } catch (error) {
-      this.logger.error("Failed to commit transaction", {
+      logger.error("Failed to commit transaction", {
         error: error instanceof Error ? error.message : error,
       });
       throw error;
@@ -522,11 +517,11 @@ export class UniversalDAO {
   }
 
   async rollbackTransaction(): Promise<void> {
-    this.logger.trace("Rolling back transaction");
+    logger.trace("Rolling back transaction");
 
     if (!this.inTransaction) {
       const error = new Error("No transaction in progress");
-      this.logger.error("Cannot rollback transaction", {
+      logger.error("Cannot rollback transaction", {
         error: error.message,
       });
       throw error;
@@ -535,9 +530,9 @@ export class UniversalDAO {
     try {
       await this.execute("ROLLBACK");
       this.inTransaction = false;
-      this.logger.debug("Transaction rolled back successfully");
+      logger.debug("Transaction rolled back successfully");
     } catch (error) {
-      this.logger.error("Failed to rollback transaction", {
+      logger.error("Failed to rollback transaction", {
         error: error instanceof Error ? error.message : error,
       });
       throw error;
@@ -546,17 +541,17 @@ export class UniversalDAO {
 
   // Schema management
   async getSchemaVersion(): Promise<string> {
-    this.logger.trace("Getting schema version");
+    logger.trace("Getting schema version");
 
     try {
       const result = await this.getRst(
         "SELECT version FROM _schema_info ORDER BY applied_at DESC LIMIT 1"
       );
       const version = result.version || "0";
-      this.logger.debug("Schema version retrieved", { version });
+      logger.debug("Schema version retrieved", { version });
       return version;
     } catch (error) {
-      this.logger.debug("No schema version found, returning default", {
+      logger.debug("No schema version found, returning default", {
         defaultVersion: "0",
       });
       return "0";
@@ -564,7 +559,7 @@ export class UniversalDAO {
   }
 
   async setSchemaVersion(version: string): Promise<void> {
-    this.logger.trace("Setting schema version", { version });
+    logger.trace("Setting schema version", { version });
 
     try {
       await this.execute(`CREATE TABLE IF NOT EXISTS _schema_info (
@@ -574,9 +569,9 @@ export class UniversalDAO {
       await this.execute(`INSERT INTO _schema_info (version) VALUES (?)`, [
         version,
       ]);
-      this.logger.info("Schema version set successfully", { version });
+      logger.info("Schema version set successfully", { version });
     } catch (error) {
-      this.logger.error("Failed to set schema version", {
+      logger.error("Failed to set schema version", {
         version,
         error: error instanceof Error ? error.message : error,
       });
@@ -586,7 +581,7 @@ export class UniversalDAO {
 
   // CRUD Operations
   async insert(insertTable: QueryTable): Promise<SQLiteResult> {
-    this.logger.trace("Performing insert operation", {
+    logger.trace("Performing insert operation", {
       tableName: insertTable.name,
     });
 
@@ -596,7 +591,7 @@ export class UniversalDAO {
 
     if (validCols.length === 0) {
       const error = new Error("No valid columns to insert");
-      this.logger.error("Insert operation failed", {
+      logger.error("Insert operation failed", {
         tableName: insertTable.name,
         error: error.message,
       });
@@ -611,7 +606,7 @@ export class UniversalDAO {
 
     const sql = `INSERT INTO ${insertTable.name} (${columnNames}) VALUES (${placeholders})`;
 
-    this.logger.debug("Executing insert query", {
+    logger.debug("Executing insert query", {
       tableName: insertTable.name,
       columnCount: validCols.length,
       sql,
@@ -619,14 +614,14 @@ export class UniversalDAO {
 
     try {
       const result = await this.execute(sql, params);
-      this.logger.info("Insert operation completed successfully", {
+      logger.info("Insert operation completed successfully", {
         tableName: insertTable.name,
         rowsAffected: result.rowsAffected,
         lastInsertRowid: result.lastInsertRowId,
       });
       return result;
     } catch (error) {
-      this.logger.error("Insert operation failed", {
+      logger.error("Insert operation failed", {
         tableName: insertTable.name,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -636,7 +631,7 @@ export class UniversalDAO {
   }
 
   async update(updateTable: QueryTable): Promise<SQLiteResult> {
-    this.logger.trace("Performing update operation", {
+    logger.trace("Performing update operation", {
       tableName: updateTable.name,
     });
 
@@ -648,7 +643,7 @@ export class UniversalDAO {
 
     if (setCols.length === 0) {
       const error = new Error("No columns to update");
-      this.logger.error("Update operation failed", {
+      logger.error("Update operation failed", {
         tableName: updateTable.name,
         error: error.message,
       });
@@ -665,7 +660,7 @@ export class UniversalDAO {
 
     if (!whereClause.sql) {
       const error = new Error("WHERE clause is required for UPDATE operation");
-      this.logger.error("Update operation failed", {
+      logger.error("Update operation failed", {
         tableName: updateTable.name,
         error: error.message,
       });
@@ -675,7 +670,7 @@ export class UniversalDAO {
     sql += whereClause.sql;
     params.push(...whereClause.params);
 
-    this.logger.debug("Executing update query", {
+    logger.debug("Executing update query", {
       tableName: updateTable.name,
       updateColumnCount: setCols.length,
       whereConditions: updateTable.wheres?.length || 0,
@@ -684,13 +679,13 @@ export class UniversalDAO {
 
     try {
       const result = await this.execute(sql, params);
-      this.logger.info("Update operation completed successfully", {
+      logger.info("Update operation completed successfully", {
         tableName: updateTable.name,
         rowsAffected: result.rowsAffected,
       });
       return result;
     } catch (error) {
-      this.logger.error("Update operation failed", {
+      logger.error("Update operation failed", {
         tableName: updateTable.name,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -700,7 +695,7 @@ export class UniversalDAO {
   }
 
   async delete(deleteTable: QueryTable): Promise<SQLiteResult> {
-    this.logger.trace("Performing delete operation", {
+    logger.trace("Performing delete operation", {
       tableName: deleteTable.name,
     });
 
@@ -709,7 +704,7 @@ export class UniversalDAO {
 
     if (!whereClause.sql) {
       const error = new Error("WHERE clause is required for DELETE operation");
-      this.logger.error("Delete operation failed", {
+      logger.error("Delete operation failed", {
         tableName: deleteTable.name,
         error: error.message,
       });
@@ -718,7 +713,7 @@ export class UniversalDAO {
 
     sql += whereClause.sql;
 
-    this.logger.debug("Executing delete query", {
+    logger.debug("Executing delete query", {
       tableName: deleteTable.name,
       whereConditions: deleteTable.wheres?.length || 0,
       sql,
@@ -726,13 +721,13 @@ export class UniversalDAO {
 
     try {
       const result = await this.execute(sql, whereClause.params);
-      this.logger.info("Delete operation completed successfully", {
+      logger.info("Delete operation completed successfully", {
         tableName: deleteTable.name,
         rowsAffected: result.rowsAffected,
       });
       return result;
     } catch (error) {
-      this.logger.error("Delete operation failed", {
+      logger.error("Delete operation failed", {
         tableName: deleteTable.name,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -742,13 +737,13 @@ export class UniversalDAO {
   }
 
   async select(selectTable: QueryTable): Promise<SQLiteRow> {
-    this.logger.trace("Performing select single operation", {
+    logger.trace("Performing select single operation", {
       tableName: selectTable.name,
     });
 
     const { sql, params } = this.buildSelectQuery(selectTable, " LIMIT 1");
 
-    this.logger.debug("Executing select single query", {
+    logger.debug("Executing select single query", {
       tableName: selectTable.name,
       sql,
     });
@@ -756,13 +751,13 @@ export class UniversalDAO {
     try {
       const result = await this.execute(sql, params);
       const row = result.rows[0] || {};
-      this.logger.debug("Select single operation completed", {
+      logger.debug("Select single operation completed", {
         tableName: selectTable.name,
         hasResult: !!result.rows[0],
       });
       return row;
     } catch (error) {
-      this.logger.error("Select single operation failed", {
+      logger.error("Select single operation failed", {
         tableName: selectTable.name,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -772,26 +767,26 @@ export class UniversalDAO {
   }
 
   async selectAll(selectTable: QueryTable): Promise<SQLiteRow[]> {
-    this.logger.trace("Performing select all operation", {
+    logger.trace("Performing select all operation", {
       tableName: selectTable.name,
     });
 
     const { sql, params } = this.buildSelectQuery(selectTable);
 
-    this.logger.debug("Executing select all query", {
+    logger.debug("Executing select all query", {
       tableName: selectTable.name,
       sql,
     });
 
     try {
       const result = await this.execute(sql, params);
-      this.logger.debug("Select all operation completed", {
+      logger.debug("Select all operation completed", {
         tableName: selectTable.name,
         rowCount: result.rows.length,
       });
       return result.rows;
     } catch (error) {
-      this.logger.error("Select all operation failed", {
+      logger.error("Select all operation failed", {
         tableName: selectTable.name,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -857,7 +852,7 @@ export class UniversalDAO {
     json: Record<string, any>,
     idFields: string[] = ["id"]
   ): QueryTable {
-    this.logger.trace("Converting JSON to QueryTable", {
+    logger.trace("Converting JSON to QueryTable", {
       tableName,
       fieldCount: Object.keys(json).length,
       idFields,
@@ -872,7 +867,7 @@ export class UniversalDAO {
       }
     }
 
-    this.logger.debug("JSON converted to QueryTable", {
+    logger.debug("JSON converted to QueryTable", {
       tableName,
       columnCount: queryTable.cols.length,
       whereCount: queryTable.wheres?.length || 0,
@@ -883,7 +878,7 @@ export class UniversalDAO {
 
   // Enhanced Data Import functionality
   async importData(options: ImportOptions): Promise<ImportResult> {
-    this.logger.info("Starting data import operation", {
+    logger.info("Starting data import operation", {
       tableName: options.tableName,
       totalRows: options.data.length,
       batchSize: options.batchSize || 1000,
@@ -903,12 +898,12 @@ export class UniversalDAO {
 
     if (!this.isConnected) {
       const error = new Error("Database is not connected");
-      this.logger.error("Import failed - database not connected");
+      logger.error("Import failed - database not connected");
       throw error;
     }
 
     if (!options.data || options.data.length === 0) {
-      this.logger.warn("No data provided for import, returning empty result");
+      logger.warn("No data provided for import, returning empty result");
       result.executionTime = Date.now() - startTime;
       return result;
     }
@@ -916,13 +911,13 @@ export class UniversalDAO {
     const tableInfo = await this.getTableInfo(options.tableName);
     if (tableInfo.length === 0) {
       const error = new Error(`Table '${options.tableName}' does not exist`);
-      this.logger.error("Import failed - table does not exist", {
+      logger.error("Import failed - table does not exist", {
         tableName: options.tableName,
       });
       throw error;
     }
 
-    this.logger.debug("Table info retrieved for import", {
+    logger.debug("Table info retrieved for import", {
       tableName: options.tableName,
       columnCount: tableInfo.length,
     });
@@ -939,7 +934,7 @@ export class UniversalDAO {
 
       for (let i = 0; i < options.data.length; i += batchSize) {
         const batch = options.data.slice(i, i + batchSize);
-        this.logger.debug("Processing import batch", {
+        logger.debug("Processing import batch", {
           batchNumber: Math.floor(i / batchSize) + 1,
           batchSize: batch.length,
           totalBatches: Math.ceil(options.data.length / batchSize),
@@ -979,7 +974,7 @@ export class UniversalDAO {
             };
             result.errors.push(errorInfo);
 
-            this.logger.warn("Row import failed", {
+            logger.warn("Row import failed", {
               rowIndex,
               tableName: options.tableName,
               error: error instanceof Error ? error.message : error,
@@ -994,7 +989,7 @@ export class UniversalDAO {
             }
 
             if (!options.skipErrors) {
-              this.logger.error(
+              logger.error(
                 "Import operation stopped due to error and skipErrors=false"
               );
               throw error;
@@ -1009,7 +1004,7 @@ export class UniversalDAO {
       }
 
       await this.commitTransaction();
-      this.logger.info("Data import completed successfully", {
+      logger.info("Data import completed successfully", {
         tableName: options.tableName,
         totalRows: result.totalRows,
         successRows: result.successRows,
@@ -1017,7 +1012,7 @@ export class UniversalDAO {
         executionTime: Date.now() - startTime,
       });
     } catch (error) {
-      this.logger.error("Import operation failed, rolling back transaction", {
+      logger.error("Import operation failed, rolling back transaction", {
         tableName: options.tableName,
         processedCount,
         error: error instanceof Error ? error.message : error,
@@ -1041,14 +1036,14 @@ export class UniversalDAO {
     columnMappings: ColumnMapping[],
     options: Partial<ImportOptions> = {}
   ): Promise<ImportResult> {
-    this.logger.info("Starting data import with column mapping", {
+    logger.info("Starting data import with column mapping", {
       tableName,
       dataRows: data.length,
       mappingCount: columnMappings.length,
     });
 
     const transformedData = data.map((row, index) => {
-      this.logger.trace("Transforming row with column mappings", {
+      logger.trace("Transforming row with column mappings", {
         rowIndex: index,
       });
       const newRow: Record<string, any> = {};
@@ -1061,7 +1056,7 @@ export class UniversalDAO {
             try {
               value = mapping.transform(value);
             } catch (error) {
-              this.logger.warn("Column transformation failed", {
+              logger.warn("Column transformation failed", {
                 rowIndex: index,
                 sourceColumn: mapping.sourceColumn,
                 targetColumn: mapping.targetColumn,
@@ -1077,7 +1072,7 @@ export class UniversalDAO {
       return newRow;
     });
 
-    this.logger.debug("Data transformation completed", {
+    logger.debug("Data transformation completed", {
       originalRowCount: data.length,
       transformedRowCount: transformedData.length,
     });
@@ -1099,7 +1094,7 @@ export class UniversalDAO {
       columnMappings?: ColumnMapping[];
     } & Partial<ImportOptions> = {}
   ): Promise<ImportResult> {
-    this.logger.info("Starting CSV import", {
+    logger.info("Starting CSV import", {
       tableName,
       csvLength: csvData.length,
       delimiter: options.delimiter || ",",
@@ -1112,7 +1107,7 @@ export class UniversalDAO {
     const lines = csvData.split("\n").filter((line) => line.trim());
     if (lines.length === 0) {
       const error = new Error("CSV data is empty");
-      this.logger.error("CSV import failed - empty data");
+      logger.error("CSV import failed - empty data");
       throw error;
     }
 
@@ -1124,7 +1119,7 @@ export class UniversalDAO {
         .split(delimiter)
         .map((h) => h.trim().replace(/^["']|["']$/g, ""));
       dataStartIndex = 1;
-      this.logger.debug("CSV headers extracted", {
+      logger.debug("CSV headers extracted", {
         headers,
         headerCount: headers.length,
       });
@@ -1134,7 +1129,7 @@ export class UniversalDAO {
         { length: firstRowCols },
         (_, i) => `column_${i + 1}`
       );
-      this.logger.debug("Generated column headers for headerless CSV", {
+      logger.debug("Generated column headers for headerless CSV", {
         columnCount: firstRowCols,
         headers,
       });
@@ -1154,14 +1149,14 @@ export class UniversalDAO {
       data.push(row);
     }
 
-    this.logger.debug("CSV data parsed", {
+    logger.debug("CSV data parsed", {
       totalLines: lines.length,
       dataRows: data.length,
       skipHeader: hasHeader,
     });
 
     if (options.columnMappings) {
-      this.logger.debug("Using column mappings for CSV import");
+      logger.debug("Using column mappings for CSV import");
       return await this.importDataWithMapping(
         tableName,
         data,
@@ -1183,7 +1178,7 @@ export class UniversalDAO {
     tableName: string,
     skipAutoIncrementPK: boolean = true
   ): Record<string, any> {
-    this.logger.trace("Validating and transforming row data", { tableName });
+    logger.trace("Validating and transforming row data", { tableName });
 
     const processedRow: Record<string, any> = {};
 
@@ -1203,7 +1198,7 @@ export class UniversalDAO {
         const error = new Error(
           `Required column '${columnName}' is missing or null in table '${tableName}'`
         );
-        this.logger.error("Row validation failed", {
+        logger.error("Row validation failed", {
           tableName,
           columnName,
           error: error.message,
@@ -1218,7 +1213,7 @@ export class UniversalDAO {
             columnInfo.type
           );
         } catch (error) {
-          this.logger.error("Value conversion failed during validation", {
+          logger.error("Value conversion failed during validation", {
             tableName,
             columnName,
             value,
@@ -1238,7 +1233,7 @@ export class UniversalDAO {
     columnMap: Map<string, any>,
     skipAutoIncrementPK: boolean = true
   ): Record<string, any> {
-    this.logger.trace("Transforming row data without validation");
+    logger.trace("Transforming row data without validation");
 
     const processedRow: Record<string, any> = {};
 
@@ -1247,7 +1242,7 @@ export class UniversalDAO {
       const columnInfo = columnMap.get(columnName);
 
       if (!columnInfo) {
-        this.logger.trace("Column not found in table schema, skipping", {
+        logger.trace("Column not found in table schema, skipping", {
           columnName: key,
         });
         continue;
@@ -1268,7 +1263,7 @@ export class UniversalDAO {
             columnInfo.type
           );
         } catch (error) {
-          this.logger.warn("Value conversion failed during transformation", {
+          logger.warn("Value conversion failed during transformation", {
             columnName: key,
             value,
             columnType: columnInfo.type,
@@ -1387,7 +1382,7 @@ export class UniversalDAO {
     try {
       await this.execute(sql, values);
     } catch (error) {
-      this.logger.trace("Insert row failed", {
+      logger.trace("Insert row failed", {
         tableName,
         columns,
         error: error instanceof Error ? error.message : error,
@@ -1401,7 +1396,7 @@ export class UniversalDAO {
     data: Record<string, any>,
     conflictColumns: string[]
   ): Promise<void> {
-    this.logger.trace("Attempting insert or update", {
+    logger.trace("Attempting insert or update", {
       tableName,
       conflictColumns,
     });
@@ -1410,7 +1405,7 @@ export class UniversalDAO {
       await this.insertRow(tableName, data);
     } catch (error) {
       if (this.isConflictError(error)) {
-        this.logger.debug("Insert conflict detected, attempting update", {
+        logger.debug("Insert conflict detected, attempting update", {
           tableName,
         });
         await this.updateRowByColumns(tableName, data, conflictColumns);
@@ -1432,7 +1427,7 @@ export class UniversalDAO {
     const whereColumns = conflictColumns;
 
     if (updateColumns.length === 0) {
-      this.logger.debug("No columns to update, skipping update operation", {
+      logger.debug("No columns to update, skipping update operation", {
         tableName,
       });
       return;
@@ -1449,13 +1444,13 @@ export class UniversalDAO {
 
     try {
       await this.execute(sql, allValues);
-      this.logger.trace("Update by columns completed", {
+      logger.trace("Update by columns completed", {
         tableName,
         updateColumns,
         whereColumns,
       });
     } catch (error) {
-      this.logger.error("Update by columns failed", {
+      logger.error("Update by columns failed", {
         tableName,
         sql,
         error: error instanceof Error ? error.message : error,
@@ -1474,7 +1469,7 @@ export class UniversalDAO {
 
   // Database info methods
   async getDatabaseInfo(): Promise<any> {
-    this.logger.trace("Getting database information");
+    logger.trace("Getting database information");
 
     try {
       const tables = await this.execute(
@@ -1489,7 +1484,7 @@ export class UniversalDAO {
         version,
       };
 
-      this.logger.debug("Database information retrieved", {
+      logger.debug("Database information retrieved", {
         tableCount: info.tables.length,
         isConnected: info.isConnected,
         version: info.version,
@@ -1497,7 +1492,7 @@ export class UniversalDAO {
 
       return info;
     } catch (error) {
-      this.logger.error("Failed to get database information", {
+      logger.error("Failed to get database information", {
         error: error instanceof Error ? error.message : error,
       });
       throw error;
@@ -1505,17 +1500,17 @@ export class UniversalDAO {
   }
 
   async getTableInfo(tableName: string): Promise<any[]> {
-    this.logger.trace("Getting table information", { tableName });
+    logger.trace("Getting table information", { tableName });
 
     try {
       const result = await this.execute(`PRAGMA table_info(${tableName})`);
-      this.logger.debug("Table information retrieved", {
+      logger.debug("Table information retrieved", {
         tableName,
         columnCount: result.rows.length,
       });
       return result.rows;
     } catch (error) {
-      this.logger.error("Failed to get table information", {
+      logger.error("Failed to get table information", {
         tableName,
         error: error instanceof Error ? error.message : error,
       });
@@ -1524,15 +1519,15 @@ export class UniversalDAO {
   }
 
   async dropTable(tableName: string): Promise<void> {
-    this.logger.info("Dropping table", { tableName });
+    logger.info("Dropping table", { tableName });
 
     const sql = `DROP TABLE IF EXISTS ${tableName}`;
 
     try {
       await this.execute(sql);
-      this.logger.info("Table dropped successfully", { tableName });
+      logger.info("Table dropped successfully", { tableName });
     } catch (error) {
-      this.logger.error("Failed to drop table", {
+      logger.error("Failed to drop table", {
         tableName,
         error: error instanceof Error ? error.message : error,
       });
@@ -1543,19 +1538,19 @@ export class UniversalDAO {
   // Connection check method
   isConnectionOpen(): boolean {
     const isOpen = this.isConnected && !!this.connection;
-    this.logger.trace("Connection status checked", { isOpen });
+    logger.trace("Connection status checked", { isOpen });
     return isOpen;
   }
 
   async ensureConnected(): Promise<void> {
     if (!this.isConnectionOpen()) {
-      this.logger.debug("Connection not open, attempting to connect");
+      logger.debug("Connection not open, attempting to connect");
       await this.connect();
     }
   }
 
   async execute(sql: string, params: any[] = []): Promise<SQLiteResult> {
-    this.logger.trace("Executing SQL query", {
+    logger.trace("Executing SQL query", {
       sql: sql.substring(0, 100) + (sql.length > 100 ? "..." : ""),
       paramCount: params.length,
     });
@@ -1564,13 +1559,13 @@ export class UniversalDAO {
 
     try {
       const result = await this.connection!.execute(sql, params);
-      this.logger.trace("SQL query executed successfully", {
+      logger.trace("SQL query executed successfully", {
         rowsAffected: result.rowsAffected,
         rowsReturned: result.rows?.length || 0,
       });
       return result;
     } catch (error) {
-      this.logger.error("SQL query execution failed", {
+      logger.error("SQL query execution failed", {
         sql: sql.substring(0, 200) + (sql.length > 200 ? "..." : ""),
         paramCount: params.length,
         error, // trả về nguyên trạng lỗi thay vì ghi là [object Object]
