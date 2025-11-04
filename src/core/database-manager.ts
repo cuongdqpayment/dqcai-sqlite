@@ -11,7 +11,9 @@ import { UniversalDAO } from "./universal-dao";
 
 import { createModuleLogger, SQLiteModules, CommonLoggerConfig } from "@/logger";
 const logger = createModuleLogger(SQLiteModules.DATABASE_MANAGER);
-console.log("XXXX", CommonLoggerConfig.getCurrentConfig());
+
+/* const initialConfig = CommonLoggerConfig.getCurrentConfig();
+console.log('📍 [database-manager.ts] Initial config:', initialConfig); */
 
 export type DatabaseConnections = {
   [key: string]: UniversalDAO;
@@ -1450,3 +1452,11 @@ export class DatabaseManager {
     });
   }
 }
+
+/* const finalConfig = CommonLoggerConfig.getCurrentConfig();
+if (finalConfig.defaultLevel !== initialConfig.defaultLevel) {
+  console.trace('⚠️ [database-manager.ts] Config changed!', {
+    from: initialConfig.defaultLevel,
+    to: finalConfig.defaultLevel
+  });
+} */

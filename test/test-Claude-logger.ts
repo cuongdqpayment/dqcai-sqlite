@@ -1,14 +1,28 @@
-// ./test/test-claude.ts
-import { createModuleLogger, APPModules, CommonLoggerConfig } from "./logger";
-const logger = createModuleLogger(APPModules.TEST_ORM);
-console.log("test-Claude.ts logger config:", CommonLoggerConfig.getCurrentConfig());
+// ./test/test-Claude-logger.ts
 
+// ========== BƯỚC 4: SAU ĐÓ mới import SQLite library ==========
+import {
+  DatabaseFactory,
+  ServiceManager,
+  BaseService,
+  DatabaseManager,
+  NodeJSAdapter,
+} from "../src/index";
 
-import { DatabaseFactory, ServiceManager, BaseService } from "@dqcai/sqlite";
-import { DatabaseManager, NodeJSAdapter } from "@dqcai/sqlite";
 import { core as coreSchema } from "./schemas.sqlite";
 
-// ========== BƯỚC 1: Định nghĩa Services ==========
+// ========== BƯỚC 1: Import logger utilities ==========
+import { createModuleLogger, APPModules, CommonLoggerConfig } from "./logger";
+console.log("Initial config:", CommonLoggerConfig.getCurrentConfig());
+// ========== BƯỚC 3: Tạo logger instance cho test ==========
+const logger = createModuleLogger(APPModules.TEST_ORM);
+
+// ========== BƯỚC 5: Verify config ==========
+console.log("After SQLite import:", CommonLoggerConfig.getCurrentConfig());
+
+logger.trace("🔍 Test file started with trace level");
+
+// ========== Define Services ==========
 class UserService extends BaseService {
   constructor() {
     super("core", "users");
@@ -16,27 +30,6 @@ class UserService extends BaseService {
 
   async findByStoreId(storeId: string) {
     return await this.findAll({ store_id: storeId });
-  }
-
-  async authenticate(username: string, password: string) {
-    const user = await this.findFirst({ username });
-    if (!user) return null;
-
-    // Verify password (simplified)
-    if (user.password_hash === password) {
-      await this.update(user.id, {
-        last_login: new Date().toISOString(),
-        failed_login_attempts: 0,
-      });
-      return user;
-    }
-
-    // Increment failed attempts
-    await this.update(user.id, {
-      failed_login_attempts: (user.failed_login_attempts || 0) + 1,
-    });
-
-    return null;
   }
 }
 
@@ -57,7 +50,7 @@ class StoreService extends BaseService {
   }
 }
 
-// ========== BƯỚC 2: Đăng ký Services ==========
+// ========== Register Services ==========
 logger.debug("\n🔌 1.Registering services...");
 const serviceManager = ServiceManager.getInstance();
 
@@ -78,23 +71,24 @@ serviceManager.registerServices([
   },
 ]);
 
-// ========== BƯỚC x: Khởi tạo và sử dụng ==========
+// ========== Main Function ==========
 async function main() {
   try {
     logger.debug("🔌 2.Registering Adapters...");
-    // ========== BƯỚC 1: Setup Adapters ==========
     DatabaseFactory.registerAdapter(new NodeJSAdapter());
 
-    // ========== BƯỚC 2: Đăng ký Schemas ==========
+    logger.debug("📋 3.Registering Schemas...");
     DatabaseManager.registerSchema("core", coreSchema);
 
-    logger.debug("🔧 3.Initializing database...\n");
+    logger.debug("🔧 4.Initializing database...\n");
 
-    console.log("Test now:", CommonLoggerConfig.getCurrentConfig());
-    // Khởi tạo core database
+    // Verify config one more time
+    console.log("Final config check:", CommonLoggerConfig.getCurrentConfig());
+
+    // Initialize core database
     await DatabaseManager.initializeCoreConnection();
 
-    // Lấy services
+    // Get services
     const enterpriseService = await serviceManager.getService(
       "core",
       "enterprises"
@@ -109,20 +103,24 @@ async function main() {
     )) as UserService;
 
     // ========== TEST CRUD Operations ==========
+    logger.info("🧪 Starting CRUD operations...");
 
     // 1. Create Enterprise
-    const enterprise = await enterpriseService.create({
-      id: crypto.randomUUID(),
-      name: "My Company",
-      business_type: "ltd",
-      email: "contact@mycompany.com",
-      status: "active",
-      subscription_plan: "premium",
-    });
+    const enterprise = await enterpriseService.upsert(
+      {
+        id: crypto.randomUUID(),
+        name: "My Company",
+        business_type: "ltd",
+        email: "contact@mycompany.com",
+        status: "active",
+        subscription_plan: "premium",
+      },
+      ["email"]
+    );
     console.log("✅ Enterprise created:", enterprise?.name);
 
     // 2. Create Store
-    const store = await storeService.create({
+    const store = await storeService.upsert({
       id: crypto.randomUUID(),
       enterprise_id: enterprise!.id,
       name: "Main Store",
@@ -156,8 +154,8 @@ async function main() {
       },
     ];
 
-    const importResult = await userService.bulkInsert(users);
-    console.log(`✅ Users imported: ${importResult.successRows} successful`);
+    const importResult = await userService.bulkUpsert(users, ["username", "email"]);
+    console.log(`✅ Users imported: ${importResult.total} successful`);
 
     // 4. Query data
     const allUsers = await userService.findByStoreId(store!.id);
@@ -176,15 +174,19 @@ async function main() {
     await serviceManager.executeSchemaTransaction("core", async (services) => {
       const [entSvc, storeSvc, userSvc] = services;
 
-      // Create another store and user in transaction
-      const newStore = await storeSvc.create({
+      const newStore = await storeSvc.upsert({
         id: crypto.randomUUID(),
         enterprise_id: enterprise!.id,
         name: "Branch Store",
         status: "active",
       });
 
-      await userSvc.create({
+      // ✅ KIỂM TRA newStore trước khi dùng
+      if (!newStore || !newStore.id) {
+        throw new Error("Failed to create store");
+      }
+
+      await userSvc.upsert({
         id: crypto.randomUUID(),
         store_id: newStore.id,
         username: "branch_manager",
@@ -214,33 +216,13 @@ async function main() {
     console.log(`   Stores: ${storeCount}`);
     console.log(`   Users: ${userCount}`);
   } catch (error) {
+    logger.error("❌ Test failed:", error);
     console.error("❌ Error:", error);
   } finally {
-    // Cleanup
     await DatabaseManager.closeAll();
-    console.log("\n✅ Database connections closed");
+    logger.info("✅ Database connections closed");
   }
 }
 
 // Run test
 main().catch(console.error);
-/* ```
-
-### Kết quả mong đợi:
-```
-✅ Enterprise created: My Company
-✅ Store created: Main Store
-✅ Users imported: 2 successful
-✅ Users in store: 2
-✅ Active stores: 1
-✅ User login updated
-✅ Transaction completed
-✅ System health: true
-   Healthy services: 3/3
-
-📊 Statistics:
-   Enterprises: 1
-   Stores: 2
-   Users: 3
-
-✅ Database connections closed */

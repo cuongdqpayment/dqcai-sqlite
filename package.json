@@ -101,6 +101,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@dqcai/logger": "^2.1.0"
+    "@dqcai/logger": "^2.1.3"
   }
 }

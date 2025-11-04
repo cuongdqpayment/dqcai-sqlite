@@ -1,5 +1,5 @@
 /* eslint-disable quotes */
-// ./srr/adapters/NodeJSAdapter.ts
+// ./src/adapters/nodejs-adapter.ts
 import { BaseAdapter } from "./base-adapter";
 
 import { createModuleLogger, SQLiteModules } from "@/logger";
@@ -39,13 +39,12 @@ export class NodeJSAdapter extends BaseAdapter {
       return BetterSqlite3;
     } catch (error) {
       logger.error("Failed to load better-sqlite3", error);
-      throw new Error(
-        "better-sqlite3 is not available in this environment"
-      );
+      throw new Error("better-sqlite3 is not available in this environment");
     }
   }
 
   async connect(dbPath: string): Promise<any> {
+    logger.trace(`Connecting to database: ${dbPath}`);
     try {
       // Kiểm tra môi trường trước
       const supported = await this.isSupported();
@@ -75,39 +74,137 @@ export class NodeJSAdapter extends BaseAdapter {
   }
 }
 
+/**
+ * Convert params để tương thích với better-sqlite3
+ */
+const normalizeParams = (params: any[]): any[] => {
+  return params.map((param) => {
+    // Convert boolean → number
+    if (typeof param === "boolean") {
+      return param ? 1 : 0;
+    }
+
+    // Convert undefined → null
+    if (param === undefined) {
+      return null;
+    }
+
+    // Convert Date → ISO string
+    if (param instanceof Date) {
+      return param.toISOString();
+    }
+
+    // Reject objects/arrays
+    if (typeof param === "object" && param !== null) {
+      throw new Error(`Cannot bind object/array: ${JSON.stringify(param)}`);
+    }
+
+    return param;
+  });
+};
+
 class NodeJSConnection {
   constructor(private db: BetterSqlite3Database) {}
 
+  /**
+   * Phân loại loại SQL query
+   */
+  private getQueryType(sql: string): "SELECT" | "PRAGMA" | "MODIFY" {
+    const normalizedSql = sql.trim().toUpperCase();
+
+    if (normalizedSql.startsWith("SELECT")) {
+      return "SELECT";
+    }
+
+    if (normalizedSql.startsWith("PRAGMA")) {
+      return "PRAGMA";
+    }
+
+    // INSERT, UPDATE, DELETE, CREATE, DROP, ALTER, etc.
+    return "MODIFY";
+  }
+
   async execute(sql: string, params: any[] = []): Promise<any> {
+    logger.debug(`NodeJSConnection.execute() sql:`, sql);
+    logger.debug(`NodeJSConnection.execute() params:`, params);
+
     try {
-      const isSelect = sql.trim().toUpperCase().startsWith("SELECT");
+      // ✅ Normalize params trước khi execute
+      const normalizedParams = normalizeParams(params);
+      logger.debug(`Normalized params:`, normalizedParams);
 
-      if (isSelect) {
-        // Xử lý câu lệnh SELECT
-        const stmt = this.db.prepare(sql);
-        const rows = stmt.all(...params);
+      const queryType = this.getQueryType(sql);
+      const stmt = this.db.prepare(sql);
 
-        logger.debug(`SQL SELECT result:`, rows);
+      switch (queryType) {
+        case "SELECT": {
+          // ✅ Xử lý câu lệnh SELECT
+          const rows = stmt.all(...normalizedParams);
+          logger.debug(`SQL SELECT result:`, rows);
 
-        return {
-          rows: rows || [],
-          rowsAffected: 0,
-        };
-      } else {
-        // Xử lý các câu lệnh INSERT, UPDATE, DELETE, CREATE, etc.
-        const stmt = this.db.prepare(sql);
-        const result = stmt.run(...params);
+          return {
+            rows: rows || [],
+            rowsAffected: 0,
+          };
+        }
 
-        logger.debug(`SQL execution result:`, result);
+        case "PRAGMA": {
+          // ✅ ĐÚNG - Phân biệt PRAGMA có trả về dữ liệu hay không
+          try {
+            // Thử get() trước cho PRAGMA trả về 1 dòng, hoặc all() cho nhiều dòng
+            const rows = stmt.all(...normalizedParams);
+            logger.debug(`PRAGMA result:`, rows);
 
-        return {
-          rows: [],
-          rowsAffected: result.changes || 0,
-          lastInsertRowId: result.lastInsertRowid || undefined,
-        };
+            return {
+              rows: rows || [],
+              rowsAffected: 0,
+              lastInsertRowId: 0,
+            };
+          } catch (pragmaError) {
+            // Nếu lỗi "does not return data", dùng run()
+            if (
+              (pragmaError as any).message?.includes("does not return data")
+            ) {
+              const result = stmt.run(...normalizedParams);
+              logger.debug(`PRAGMA execution result:`, result);
+
+              return {
+                rows: [],
+                rowsAffected: 0,
+                lastInsertRowId: 0,
+              };
+            }
+            throw pragmaError;
+          }
+        }
+
+        case "MODIFY":
+        default: {
+          // ✅ Xử lý các câu lệnh INSERT, UPDATE, DELETE, CREATE, etc.
+          const result = stmt.run(...normalizedParams);
+          logger.debug(`SQL execution result:`, {
+            changes: result.changes,
+            lastInsertRowid: result.lastInsertRowid,
+          });
+
+          return {
+            rows: [],
+            rowsAffected: result.changes || 0,
+            lastInsertRowId: result.lastInsertRowid || undefined,
+          };
+        }
       }
     } catch (error) {
-      logger.error(`SQL execution failed`, error);
+      // ✅ CHỈ log khi KHÔNG phải lỗi _schema_info
+      if (
+        !(error as any).message ||
+        (error as any).message.indexOf("_schema_info") === -1
+      ) {
+        logger.error(`SQL execution failed`, {
+          code: (error as any).code,
+          message: (error as any).message,
+        });
+      }
       throw error;
     }
   }
@@ -142,27 +239,74 @@ class NodeJSConnection {
 class NodeJSTransaction {
   constructor(private db: BetterSqlite3Database) {}
 
+  /**
+   * Phân loại loại SQL query
+   */
+  private getQueryType(sql: string): "SELECT" | "PRAGMA" | "MODIFY" {
+    const normalizedSql = sql.trim().toUpperCase();
+
+    if (normalizedSql.startsWith("SELECT")) {
+      return "SELECT";
+    }
+
+    if (normalizedSql.startsWith("PRAGMA")) {
+      return "PRAGMA";
+    }
+
+    return "MODIFY";
+  }
+
   async executeSql(sql: string, params: any[] = []): Promise<any> {
     try {
-      const isSelect = sql.trim().toUpperCase().startsWith("SELECT");
+      // ✅ Normalize params trước khi execute
+      const normalizedParams = normalizeParams(params);
+      logger.debug(`Normalized params:`, normalizedParams);
 
-      if (isSelect) {
-        const stmt = this.db.prepare(sql);
-        const rows = stmt.all(...params);
+      const queryType = this.getQueryType(sql);
+      const stmt = this.db.prepare(sql);
 
-        return {
-          rows: rows || [],
-          rowsAffected: 0,
-        };
-      } else {
-        const stmt = this.db.prepare(sql);
-        const result = stmt.run(...params);
+      switch (queryType) {
+        case "SELECT": {
+          const rows = stmt.all(...normalizedParams);
+          return {
+            rows: rows || [],
+            rowsAffected: 0,
+          };
+        }
 
-        return {
-          rows: [],
-          rowsAffected: result.changes || 0,
-          lastInsertRowId: result.lastInsertRowid || undefined,
-        };
+        case "PRAGMA": {
+          // ✅ ĐÚNG - Áp dụng logic tương tự
+          try {
+            const rows = stmt.all(...normalizedParams);
+            return {
+              rows: rows || [],
+              rowsAffected: 0,
+              lastInsertRowId: 0,
+            };
+          } catch (pragmaError) {
+            if (
+              (pragmaError as any).message?.includes("does not return data")
+            ) {
+              const result = stmt.run(...normalizedParams);
+              return {
+                rows: [],
+                rowsAffected: 0,
+                lastInsertRowId: 0,
+              };
+            }
+            throw pragmaError;
+          }
+        }
+
+        case "MODIFY":
+        default: {
+          const result = stmt.run(...normalizedParams);
+          return {
+            rows: [],
+            rowsAffected: result.changes || 0,
+            lastInsertRowId: result.lastInsertRowid || undefined,
+          };
+        }
       }
     } catch (error) {
       logger.error("Transaction SQL execution failed", error);

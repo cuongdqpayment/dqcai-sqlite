@@ -233,7 +233,7 @@ export class UniversalDAO {
       }
     } catch (error) {
       logger.debug(
-        "The first time for init from Schema! No existing schema detected"
+        "The first time for init from Schema! No existing schema _schema_info detected"
       );
       hasExistingSchema = false;
     }
@@ -1565,11 +1565,14 @@ export class UniversalDAO {
       });
       return result;
     } catch (error) {
-      logger.error("SQL query execution failed", {
-        sql: sql.substring(0, 200) + (sql.length > 200 ? "..." : ""),
-        paramCount: params.length,
-        error, // trả về nguyên trạng lỗi thay vì ghi là [object Object]
-      });
+      // ✅ CHỈ log khi KHÔNG phải lỗi _schema_info
+      if (sql.indexOf("_schema_info") === -1) {
+        logger.error("SQL query execution failed", {
+          sql: sql.substring(0, 200) + (sql.length > 200 ? "..." : ""),
+          paramCount: params.length,
+          error,
+        });
+      }
       throw error;
     }
   }

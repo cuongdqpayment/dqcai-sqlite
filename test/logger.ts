@@ -15,9 +15,9 @@ const APPModules = {
 
 const config = new LoggerConfigBuilder()
   .setEnabled(true)
-  .setDefaultLevel("trace")
+  .setDefaultLevel("warn")
   .build();
-
+  
 CommonLoggerConfig.updateConfiguration(config);
 console.log("### -->Registered logger config from test!");
 export { createModuleLogger, APPModules, CommonLoggerConfig };

@@ -50,33 +50,33 @@ export abstract class BaseService<T = any> {
     logger.debug("Creating BaseService instance", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      primaryKeyFields: this.primaryKeyFields
+      primaryKeyFields: this.primaryKeyFields,
     });
 
     // Register reconnect listener for database reconnection
     this.reconnectHandler = (newDao: UniversalDAO) => {
       logger.info("Database reconnected for service", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
-      
+
       this.dao = newDao;
       this._emit("daoReconnected", { schemaName: this.schemaName });
     };
 
     DatabaseManager.onDatabaseReconnect(schemaName, this.reconnectHandler);
     this.bindMethods();
-    
+
     logger.trace("BaseService instance created successfully", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
   }
 
   private bindMethods(): void {
     logger.trace("Binding service methods", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(this));
@@ -98,7 +98,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       previousFields: this.primaryKeyFields,
-      newFields: fields
+      newFields: fields,
     });
 
     this.primaryKeyFields = fields;
@@ -112,19 +112,19 @@ export abstract class BaseService<T = any> {
     logger.info("Initializing BaseService", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      isInitialized: this.isInitialized
+      isInitialized: this.isInitialized,
     });
 
     try {
       if (this.isInitialized) {
         logger.debug("Service already initialized, skipping", {
-          schemaName: this.schemaName
+          schemaName: this.schemaName,
         });
         return this;
       }
 
       logger.debug("Getting DAO from DatabaseManager", {
-        schemaName: this.schemaName
+        schemaName: this.schemaName,
       });
 
       this.dao = await DatabaseManager.getLazyLoading(this.schemaName);
@@ -132,26 +132,26 @@ export abstract class BaseService<T = any> {
       if (!this.dao) {
         const errorMsg = `Failed to initialize DAO for schema: ${this.schemaName}`;
         logger.error(errorMsg, {
-          schemaName: this.schemaName
+          schemaName: this.schemaName,
         });
         throw new Error(errorMsg);
       }
 
       if (!this.dao.isConnectionOpen()) {
         logger.debug("DAO connection not open, connecting", {
-          schemaName: this.schemaName
+          schemaName: this.schemaName,
         });
         await this.dao.connect();
       }
 
       this.isOpened = true;
       this.isInitialized = true;
-      
+
       logger.info("BaseService initialized successfully", {
         schemaName: this.schemaName,
         tableName: this.tableName,
         isOpened: this.isOpened,
-        isInitialized: this.isInitialized
+        isInitialized: this.isInitialized,
       });
 
       this._emit("initialized", { schemaName: this.schemaName });
@@ -161,10 +161,141 @@ export abstract class BaseService<T = any> {
       logger.error("Error initializing BaseService", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("INIT_ERROR", error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upsert a record - Insert if not exists, update if exists
+   * @param data - Data to insert or update
+   * @param searchFields - Fields to check for existence (defaults to primary key)
+   * @returns The created or updated record
+   */
+  async upsert(data: Partial<T>, searchFields?: string[]): Promise<T | null> {
+    logger.debug("Starting upsert operation", {
+      schemaName: this.schemaName,
+      tableName: this.tableName,
+      hasData: !!data,
+      dataKeys: data ? Object.keys(data) : [],
+      searchFields: searchFields || this.primaryKeyFields,
+    });
+
+    await this._ensureInitialized();
+    await this.ensureValidConnection();
+
+    try {
+      this._validateData(data);
+
+      // Determine which fields to use for existence check
+      const fieldsToCheck = searchFields || this.primaryKeyFields;
+
+      logger.trace("Building conditions for existence check", {
+        schemaName: this.schemaName,
+        tableName: this.tableName,
+        fieldsToCheck,
+      });
+
+      // Build conditions from specified fields
+      const conditions: Record<string, any> = {};
+      let hasAllRequiredFields = true;
+
+      for (const field of fieldsToCheck) {
+        const value = data[field as keyof T];
+        if (value !== undefined && value !== null) {
+          conditions[field] = value;
+        } else {
+          hasAllRequiredFields = false;
+          logger.trace("Missing required field for upsert check", {
+            schemaName: this.schemaName,
+            tableName: this.tableName,
+            field,
+          });
+          break;
+        }
+      }
+
+      // If we don't have all required fields, treat as insert
+      if (!hasAllRequiredFields) {
+        logger.debug("Missing required fields, performing insert", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          fieldsToCheck,
+        });
+        return await this.create(data);
+      }
+
+      // Check if record exists
+      logger.trace("Checking if record exists", {
+        schemaName: this.schemaName,
+        tableName: this.tableName,
+        conditions,
+      });
+
+      const existingRecord = await this.findFirst(conditions);
+
+      if (existingRecord) {
+        // Record exists - perform update
+        const primaryKeyValue =
+          existingRecord[this.primaryKeyFields[0] as keyof T];
+
+        logger.debug("Record exists, performing update", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          primaryKeyField: this.primaryKeyFields[0],
+          primaryKeyValue,
+        });
+
+        const result = await this.update(primaryKeyValue, data);
+
+        logger.info("Upsert completed (update)", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          operation: "update",
+          primaryKeyValue,
+        });
+
+        this._emit("dataUpserted", {
+          operation: "upsert",
+          action: "update",
+          data: result,
+        });
+
+        return result;
+      } else {
+        // Record doesn't exist - perform insert
+        logger.debug("Record does not exist, performing insert", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+        });
+
+        const result = await this.create(data);
+
+        logger.info("Upsert completed (insert)", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          operation: "insert",
+        });
+
+        this._emit("dataUpserted", {
+          operation: "upsert",
+          action: "insert",
+          data: result,
+        });
+
+        return result;
+      }
+    } catch (error) {
+      logger.error("Error during upsert operation", {
+        schemaName: this.schemaName,
+        tableName: this.tableName,
+        error: (error as Error).message,
+      });
+
+      this._handleError("UPSERT_ERROR", error as Error);
       throw error;
     }
   }
@@ -177,29 +308,29 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       hasData: !!data,
-      dataKeys: data ? Object.keys(data) : []
+      dataKeys: data ? Object.keys(data) : [],
     });
 
     await this._ensureInitialized();
     await this.ensureValidConnection();
-    
+
     try {
       this._validateData(data);
-      
+
       logger.trace("Building data table for insert", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
 
       const queryTable = this.buildDataTable(data as Record<string, any>);
       const result = await this.dao!.insert(queryTable);
-      
+
       if (result.rowsAffected === 0) {
         const errorMsg = "Insert operation failed - no rows affected";
         logger.error(errorMsg, {
           schemaName: this.schemaName,
           tableName: this.tableName,
-          result
+          result,
         });
         throw new Error(errorMsg);
       }
@@ -208,26 +339,26 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         rowsAffected: result.rowsAffected,
-        lastInsertRowId: result.lastInsertRowId
+        lastInsertRowId: result.lastInsertRowId,
       });
 
       let createdRecord: T | null = null;
       const primaryKeyValue = data[this.primaryKeyFields[0] as keyof T];
-      
+
       try {
         if (primaryKeyValue !== undefined && primaryKeyValue !== null) {
           logger.trace("Retrieving created record by primary key", {
             schemaName: this.schemaName,
             tableName: this.tableName,
             primaryKeyField: this.primaryKeyFields[0],
-            primaryKeyValue
+            primaryKeyValue,
           });
           createdRecord = await this.findById(primaryKeyValue as any);
         } else if (result.lastInsertRowId) {
           logger.trace("Retrieving created record by last insert ID", {
             schemaName: this.schemaName,
             tableName: this.tableName,
-            lastInsertRowId: result.lastInsertRowId
+            lastInsertRowId: result.lastInsertRowId,
           });
           createdRecord = await this.findById(result.lastInsertRowId);
         }
@@ -235,14 +366,14 @@ export abstract class BaseService<T = any> {
         logger.warn("Could not retrieve created record", {
           schemaName: this.schemaName,
           tableName: this.tableName,
-          findError: (findError as Error).message
+          findError: (findError as Error).message,
         });
       }
 
       if (!createdRecord) {
         logger.debug("Using original data as created record", {
           schemaName: this.schemaName,
-          tableName: this.tableName
+          tableName: this.tableName,
         });
         createdRecord = data as T;
       }
@@ -250,7 +381,7 @@ export abstract class BaseService<T = any> {
       logger.info("Record created successfully", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        recordRetrieved: !!createdRecord
+        recordRetrieved: !!createdRecord,
       });
 
       this._emit("dataCreated", { operation: "create", data: createdRecord });
@@ -259,7 +390,7 @@ export abstract class BaseService<T = any> {
       logger.error("Error creating record", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("CREATE_ERROR", error as Error);
@@ -276,7 +407,7 @@ export abstract class BaseService<T = any> {
       tableName: this.tableName,
       id,
       hasData: !!data,
-      dataKeys: data ? Object.keys(data) : []
+      dataKeys: data ? Object.keys(data) : [],
     });
 
     await this._ensureInitialized();
@@ -286,13 +417,13 @@ export abstract class BaseService<T = any> {
         const errorMsg = "ID is required for update";
         logger.error(errorMsg, {
           schemaName: this.schemaName,
-          tableName: this.tableName
+          tableName: this.tableName,
         });
         throw new Error(errorMsg);
       }
 
       this._validateData(data);
-      
+
       const updateData = {
         ...data,
         [this.primaryKeyFields[0]]: id,
@@ -301,7 +432,7 @@ export abstract class BaseService<T = any> {
       logger.trace("Building update query table", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        id
+        id,
       });
 
       const queryTable = this.buildDataTable(updateData as Record<string, any>);
@@ -310,16 +441,16 @@ export abstract class BaseService<T = any> {
       logger.debug("Update operation completed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        id
+        id,
       });
 
       const result = await this.findById(id);
-      
+
       logger.info("Record updated successfully", {
         schemaName: this.schemaName,
         tableName: this.tableName,
         id,
-        recordFound: !!result
+        recordFound: !!result,
       });
 
       this._emit("dataUpdated", { operation: "update", id, data: result });
@@ -329,7 +460,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         id,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("UPDATE_ERROR", error as Error);
@@ -344,7 +475,7 @@ export abstract class BaseService<T = any> {
     logger.debug("Deleting record", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      id
+      id,
     });
 
     await this._ensureInitialized();
@@ -354,7 +485,7 @@ export abstract class BaseService<T = any> {
         const errorMsg = "ID is required for delete";
         logger.error(errorMsg, {
           schemaName: this.schemaName,
-          tableName: this.tableName
+          tableName: this.tableName,
         });
         throw new Error(errorMsg);
       }
@@ -369,7 +500,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         id,
-        primaryKeyField: this.primaryKeyFields[0]
+        primaryKeyField: this.primaryKeyFields[0],
       });
 
       const result = await this.dao!.delete(queryTable);
@@ -380,14 +511,14 @@ export abstract class BaseService<T = any> {
           schemaName: this.schemaName,
           tableName: this.tableName,
           id,
-          rowsAffected: result.rowsAffected
+          rowsAffected: result.rowsAffected,
         });
         this._emit("dataDeleted", { operation: "delete", id });
       } else {
         logger.warn("Delete operation completed but no rows affected", {
           schemaName: this.schemaName,
           tableName: this.tableName,
-          id
+          id,
         });
       }
 
@@ -397,7 +528,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         id,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("DELETE_ERROR", error as Error);
@@ -412,7 +543,7 @@ export abstract class BaseService<T = any> {
     logger.debug("Finding record by ID", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      id
+      id,
     });
 
     await this._ensureInitialized();
@@ -422,29 +553,29 @@ export abstract class BaseService<T = any> {
         const errorMsg = "ID is required";
         logger.error(errorMsg, {
           schemaName: this.schemaName,
-          tableName: this.tableName
+          tableName: this.tableName,
         });
         throw new Error(errorMsg);
       }
 
       const conditions = { [this.primaryKeyFields[0]]: id };
-      
+
       logger.trace("Building select query", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        conditions
+        conditions,
       });
 
       const queryTable = this.buildSelectTable(conditions);
       const result = await this.dao!.select(queryTable);
 
       const record = Object.keys(result).length > 0 ? (result as T) : null;
-      
+
       logger.debug("Find by ID completed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
         id,
-        recordFound: !!record
+        recordFound: !!record,
       });
 
       this._emit("dataFetched", { operation: "findById", id });
@@ -454,7 +585,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         id,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("FIND_BY_ID_ERROR", error as Error);
@@ -470,7 +601,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       conditionsCount: Object.keys(conditions).length,
-      conditions
+      conditions,
     });
 
     await this._ensureInitialized();
@@ -478,18 +609,18 @@ export abstract class BaseService<T = any> {
     try {
       logger.trace("Building select query for findFirst", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
 
       const queryTable = this.buildSelectTable(conditions);
       const result = await this.dao!.select(queryTable);
 
       const record = Object.keys(result).length > 0 ? (result as T) : null;
-      
+
       logger.debug("Find first completed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        recordFound: !!record
+        recordFound: !!record,
       });
 
       this._emit("dataFetched", { operation: "findFirst" });
@@ -499,7 +630,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         conditions,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("FIND_FIRST_ERROR", error as Error);
@@ -522,7 +653,7 @@ export abstract class BaseService<T = any> {
       hasOffset: !!options.offset,
       hasOrderBy: !!(options.orderBy && options.orderBy.length > 0),
       limit: options.limit,
-      offset: options.offset
+      offset: options.offset,
     });
 
     await this._ensureInitialized();
@@ -536,7 +667,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         totalWheres: allWheres.length,
-        hasColumns: !!(options.columns && options.columns.length > 0)
+        hasColumns: !!(options.columns && options.columns.length > 0),
       });
 
       const queryTable: QueryTable = {
@@ -551,12 +682,12 @@ export abstract class BaseService<T = any> {
       };
 
       const results = await this.dao!.selectAll(queryTable);
-      
+
       logger.info("Find all completed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
         recordsFound: results.length,
-        conditionsCount: Object.keys(conditions).length
+        conditionsCount: Object.keys(conditions).length,
       });
 
       this._emit("dataFetched", {
@@ -570,7 +701,7 @@ export abstract class BaseService<T = any> {
         tableName: this.tableName,
         conditions,
         options,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("FIND_ALL_ERROR", error as Error);
@@ -586,7 +717,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       hasWhere: !!where,
-      whereType: where ? (Array.isArray(where) ? 'array' : 'object') : 'none'
+      whereType: where ? (Array.isArray(where) ? "array" : "object") : "none",
     });
 
     await this._ensureInitialized();
@@ -598,13 +729,13 @@ export abstract class BaseService<T = any> {
         whereConditions = where;
         logger.trace("Using array where conditions", {
           schemaName: this.schemaName,
-          whereCount: whereConditions.length
+          whereCount: whereConditions.length,
         });
       } else if (where && typeof where === "object") {
         whereConditions = this.buildWhereFromObject(where);
         logger.trace("Built where conditions from object", {
           schemaName: this.schemaName,
-          whereCount: whereConditions.length
+          whereCount: whereConditions.length,
         });
       }
 
@@ -616,11 +747,11 @@ export abstract class BaseService<T = any> {
 
       const result = await this.dao!.select(queryTable);
       const count = result.count || 0;
-      
+
       logger.debug("Count completed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        count
+        count,
       });
 
       return count;
@@ -629,7 +760,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         where,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("COUNT_ERROR", error as Error);
@@ -644,17 +775,17 @@ export abstract class BaseService<T = any> {
     logger.debug("Checking if record exists", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      id
+      id,
     });
 
     const item = await this.findById(id);
     const exists = item !== null;
-    
+
     logger.debug("Existence check completed", {
       schemaName: this.schemaName,
       tableName: this.tableName,
       id,
-      exists
+      exists,
     });
 
     return exists;
@@ -666,7 +797,7 @@ export abstract class BaseService<T = any> {
   async truncate(): Promise<void> {
     logger.warn("Truncating table - this will delete all data", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     await this._ensureInitialized();
@@ -674,17 +805,17 @@ export abstract class BaseService<T = any> {
     try {
       logger.debug("Executing truncate operations", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
 
       await this.dao!.execute(`DELETE FROM ${this.tableName}`);
       await this.dao!.execute(
         `DELETE FROM sqlite_sequence WHERE name='${this.tableName}'`
       );
-      
+
       logger.info("Table truncated successfully", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
 
       this._emit("tableTruncated", { tableName: this.tableName });
@@ -692,10 +823,235 @@ export abstract class BaseService<T = any> {
       logger.error("Error truncating table", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("TRUNCATE_ERROR", error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk upsert records - Insert if not exists, update if exists for multiple records
+   * @param dataArray - Array of data to insert or update
+   * @param searchFields - Fields to check for existence (defaults to primary key)
+   * @param useTransaction - Whether to wrap in transaction (default: true)
+   * @returns Result with created and updated records
+   */
+  async bulkUpsert(
+    dataArray: Partial<T>[],
+    searchFields?: string[],
+    useTransaction: boolean = true
+  ): Promise<{
+    created: T[];
+    updated: T[];
+    total: number;
+    errors: Array<{ index: number; data: Partial<T>; error: string }>;
+  }> {
+    logger.info("Starting bulk upsert operation", {
+      schemaName: this.schemaName,
+      tableName: this.tableName,
+      itemsCount: dataArray.length,
+      searchFields: searchFields || this.primaryKeyFields,
+      useTransaction,
+    });
+
+    await this._ensureInitialized();
+    await this.ensureValidConnection();
+
+    try {
+      if (!Array.isArray(dataArray) || dataArray.length === 0) {
+        const errorMsg = "Data must be a non-empty array";
+        logger.error(errorMsg, {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          dataType: typeof dataArray,
+          dataLength: Array.isArray(dataArray) ? dataArray.length : "N/A",
+        });
+        throw new Error(errorMsg);
+      }
+
+      const result = {
+        created: [] as T[],
+        updated: [] as T[],
+        total: dataArray.length,
+        errors: [] as Array<{ index: number; data: Partial<T>; error: string }>,
+      };
+
+      // Determine which fields to use for existence check
+      const fieldsToCheck = searchFields || this.primaryKeyFields;
+
+      logger.debug("Preparing bulk upsert", {
+        schemaName: this.schemaName,
+        tableName: this.tableName,
+        fieldsToCheck,
+        itemsCount: dataArray.length,
+      });
+
+      // Process function
+      const processBulkUpsert = async () => {
+        for (let i = 0; i < dataArray.length; i++) {
+          const data = dataArray[i];
+
+          try {
+            if (i % 100 === 0) {
+              logger.trace("Bulk upsert progress", {
+                schemaName: this.schemaName,
+                tableName: this.tableName,
+                processed: i,
+                total: dataArray.length,
+                created: result.created.length,
+                updated: result.updated.length,
+                errors: result.errors.length,
+              });
+            }
+
+            this._validateData(data);
+
+            // Build conditions from specified fields
+            const conditions: Record<string, any> = {};
+            let hasAllRequiredFields = true;
+
+            for (const field of fieldsToCheck) {
+              const value = data[field as keyof T];
+              if (value !== undefined && value !== null) {
+                conditions[field] = value;
+              } else {
+                hasAllRequiredFields = false;
+                break;
+              }
+            }
+
+            // If we don't have all required fields, treat as insert
+            if (!hasAllRequiredFields) {
+              logger.trace(
+                "Missing required fields for item, performing insert",
+                {
+                  schemaName: this.schemaName,
+                  tableName: this.tableName,
+                  index: i,
+                  fieldsToCheck,
+                }
+              );
+
+              const queryTable = this.buildDataTable(
+                data as Record<string, any>
+              );
+              await this.dao!.insert(queryTable);
+              result.created.push(data as T);
+              continue;
+            }
+
+            // Check if record exists
+            const existingRecord = await this.findFirst(conditions);
+
+            if (existingRecord) {
+              // Record exists - perform update
+              const primaryKeyValue =
+                existingRecord[this.primaryKeyFields[0] as keyof T];
+
+              logger.trace("Record exists, performing update", {
+                schemaName: this.schemaName,
+                tableName: this.tableName,
+                index: i,
+                primaryKeyValue,
+              });
+
+              const updateData = {
+                ...data,
+                [this.primaryKeyFields[0]]: primaryKeyValue,
+              };
+
+              const queryTable = this.buildDataTable(
+                updateData as Record<string, any>
+              );
+              await this.dao!.update(queryTable);
+
+              const updatedRecord = await this.findById(primaryKeyValue);
+              if (updatedRecord) {
+                result.updated.push(updatedRecord);
+              }
+            } else {
+              // Record doesn't exist - perform insert
+              logger.trace("Record does not exist, performing insert", {
+                schemaName: this.schemaName,
+                tableName: this.tableName,
+                index: i,
+              });
+
+              const queryTable = this.buildDataTable(
+                data as Record<string, any>
+              );
+              await this.dao!.insert(queryTable);
+              result.created.push(data as T);
+            }
+          } catch (error) {
+            logger.warn("Error processing item in bulk upsert", {
+              schemaName: this.schemaName,
+              tableName: this.tableName,
+              index: i,
+              error: (error as Error).message,
+            });
+
+            result.errors.push({
+              index: i,
+              data,
+              error: (error as Error).message,
+            });
+          }
+        }
+      };
+
+      // Execute with or without transaction
+      if (useTransaction) {
+        logger.debug("Executing bulk upsert in transaction", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          itemsCount: dataArray.length,
+        });
+
+        await this.executeTransaction(processBulkUpsert);
+      } else {
+        logger.debug("Executing bulk upsert without transaction", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          itemsCount: dataArray.length,
+        });
+
+        await processBulkUpsert();
+      }
+
+      logger.info("Bulk upsert completed", {
+        schemaName: this.schemaName,
+        tableName: this.tableName,
+        total: result.total,
+        created: result.created.length,
+        updated: result.updated.length,
+        errors: result.errors.length,
+        successRate: `${(
+          ((result.created.length + result.updated.length) / result.total) *
+          100
+        ).toFixed(2)}%`,
+      });
+
+      this._emit("dataBulkUpserted", {
+        operation: "bulkUpsert",
+        created: result.created.length,
+        updated: result.updated.length,
+        errors: result.errors.length,
+        total: result.total,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error("Error during bulk upsert operation", {
+        schemaName: this.schemaName,
+        tableName: this.tableName,
+        itemsCount: dataArray.length,
+        error: (error as Error).message,
+      });
+
+      this._handleError("BULK_UPSERT_ERROR", error as Error);
       throw error;
     }
   }
@@ -707,7 +1063,7 @@ export abstract class BaseService<T = any> {
     logger.info("Starting bulk insert", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      itemsCount: items.length
+      itemsCount: items.length,
     });
 
     await this._ensureInitialized();
@@ -719,7 +1075,7 @@ export abstract class BaseService<T = any> {
           schemaName: this.schemaName,
           tableName: this.tableName,
           itemsType: typeof items,
-          itemsLength: Array.isArray(items) ? items.length : 'N/A'
+          itemsLength: Array.isArray(items) ? items.length : "N/A",
         });
         throw new Error(errorMsg);
       }
@@ -727,7 +1083,7 @@ export abstract class BaseService<T = any> {
       logger.debug("Executing bulk insert operation", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        itemsCount: items.length
+        itemsCount: items.length,
       });
 
       const result = await this.dao!.importData({
@@ -743,7 +1099,7 @@ export abstract class BaseService<T = any> {
         tableName: this.tableName,
         totalRows: result.totalRows,
         successRows: result.successRows,
-        errorRows: result.errorRows
+        errorRows: result.errorRows,
       });
 
       this._emit("dataBulkCreated", {
@@ -756,7 +1112,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         itemsCount: items.length,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("BULK_INSERT_ERROR", error as Error);
@@ -771,7 +1127,7 @@ export abstract class BaseService<T = any> {
     logger.info("Starting bulk create with transaction", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      itemsCount: dataArray.length
+      itemsCount: dataArray.length,
     });
 
     await this._ensureInitialized();
@@ -783,29 +1139,29 @@ export abstract class BaseService<T = any> {
           schemaName: this.schemaName,
           tableName: this.tableName,
           dataType: typeof dataArray,
-          dataLength: Array.isArray(dataArray) ? dataArray.length : 'N/A'
+          dataLength: Array.isArray(dataArray) ? dataArray.length : "N/A",
         });
         throw new Error(errorMsg);
       }
 
       const results: T[] = [];
-      
+
       logger.debug("Executing bulk create in transaction", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        itemsCount: dataArray.length
+        itemsCount: dataArray.length,
       });
 
       await this.executeTransaction(async () => {
         for (let i = 0; i < dataArray.length; i++) {
           const data = dataArray[i];
-          
+
           if (i % 100 === 0) {
             logger.trace("Bulk create progress", {
               schemaName: this.schemaName,
               tableName: this.tableName,
               processed: i,
-              total: dataArray.length
+              total: dataArray.length,
             });
           }
 
@@ -819,7 +1175,7 @@ export abstract class BaseService<T = any> {
       logger.info("Bulk create completed successfully", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        recordsCreated: results.length
+        recordsCreated: results.length,
       });
 
       this._emit("dataBulkCreated", {
@@ -832,7 +1188,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         itemsCount: dataArray.length,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("BULK_CREATE_ERROR", error as Error);
@@ -846,28 +1202,28 @@ export abstract class BaseService<T = any> {
   async executeTransaction(callback: () => Promise<any>): Promise<any> {
     logger.debug("Starting transaction", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     await this._ensureInitialized();
 
     try {
       logger.trace("Beginning database transaction", {
-        schemaName: this.schemaName
+        schemaName: this.schemaName,
       });
 
       await this.dao!.beginTransaction();
       const result = await callback();
-      
+
       logger.trace("Committing transaction", {
-        schemaName: this.schemaName
+        schemaName: this.schemaName,
       });
 
       await this.dao!.commitTransaction();
-      
+
       logger.info("Transaction completed successfully", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
 
       this._emit("transactionCompleted", { operation: "transaction" });
@@ -876,22 +1232,22 @@ export abstract class BaseService<T = any> {
       logger.error("Transaction failed, rolling back", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       try {
         await this.dao!.rollbackTransaction();
         logger.debug("Transaction rollback successful", {
-          schemaName: this.schemaName
+          schemaName: this.schemaName,
         });
       } catch (rollbackError) {
         logger.error("Error during transaction rollback", {
           schemaName: this.schemaName,
-          rollbackError: (rollbackError as Error).message
+          rollbackError: (rollbackError as Error).message,
         });
         this._handleError("ROLLBACK_ERROR", rollbackError as Error);
       }
-      
+
       this._handleError("TRANSACTION_ERROR", error as Error);
       throw error;
     }
@@ -914,7 +1270,9 @@ export abstract class BaseService<T = any> {
       csvDataLength: csvData.length,
       delimiter: options.delimiter,
       hasHeader: options.hasHeader,
-      hasMappings: !!(options.columnMappings && options.columnMappings.length > 0)
+      hasMappings: !!(
+        options.columnMappings && options.columnMappings.length > 0
+      ),
     });
 
     await this._ensureInitialized();
@@ -931,7 +1289,7 @@ export abstract class BaseService<T = any> {
         tableName: this.tableName,
         totalRows: result.totalRows,
         successRows: result.successRows,
-        errorRows: result.errorRows
+        errorRows: result.errorRows,
       });
 
       this._emit("dataImported", { operation: "importFromCSV", result });
@@ -941,7 +1299,7 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         csvDataLength: csvData.length,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("IMPORT_CSV_ERROR", error as Error);
@@ -961,7 +1319,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       dataCount: data.length,
-      mappingsCount: columnMappings.length
+      mappingsCount: columnMappings.length,
     });
 
     await this._ensureInitialized();
@@ -979,7 +1337,7 @@ export abstract class BaseService<T = any> {
         tableName: this.tableName,
         totalRows: result.totalRows,
         successRows: result.successRows,
-        errorRows: result.errorRows
+        errorRows: result.errorRows,
       });
 
       this._emit("dataImported", { operation: "importWithMapping", result });
@@ -990,7 +1348,7 @@ export abstract class BaseService<T = any> {
         tableName: this.tableName,
         dataCount: data.length,
         mappingsCount: columnMappings.length,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("IMPORT_MAPPING_ERROR", error as Error);
@@ -1007,7 +1365,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       conditionsCount: Object.keys(conditions).length,
-      hasOptions: Object.keys(options).length > 0
+      hasOptions: Object.keys(options).length > 0,
     });
 
     const queryTable: QueryTable = {
@@ -1041,15 +1399,24 @@ export abstract class BaseService<T = any> {
   }
 
   protected buildDataTable(data: Record<string, any>): QueryTable {
+    // ✅ Filter out undefined values trước khi build query
+    const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+
     logger.trace("Building data table for query", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      dataKeys: Object.keys(data)
+      dataKeys: Object.keys(cleanData),
+      removedKeys: Object.keys(data).filter((k) => data[k] === undefined),
     });
 
     return this.dao!.convertJsonToQueryTable(
       this.tableName,
-      data,
+      cleanData,
       this.primaryKeyFields
     );
   }
@@ -1062,7 +1429,7 @@ export abstract class BaseService<T = any> {
     logger.trace("Built where clauses from object", {
       schemaName: this.schemaName,
       originalKeys: Object.keys(obj).length,
-      filteredWheres: wheres.length
+      filteredWheres: wheres.length,
     });
 
     return wheres;
@@ -1073,7 +1440,7 @@ export abstract class BaseService<T = any> {
     logger.trace("Adding event listener", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      event
+      event,
     });
 
     if (!this.eventListeners.has(event)) {
@@ -1087,7 +1454,7 @@ export abstract class BaseService<T = any> {
     logger.trace("Removing event listener", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      event
+      event,
     });
 
     const handlers = this.eventListeners.get(event);
@@ -1105,7 +1472,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       event,
-      hasData: !!data
+      hasData: !!data,
     });
 
     const handlers = this.eventListeners.get(event);
@@ -1118,7 +1485,7 @@ export abstract class BaseService<T = any> {
             schemaName: this.schemaName,
             tableName: this.tableName,
             event,
-            error: (error as Error).message
+            error: (error as Error).message,
           });
         }
       });
@@ -1130,7 +1497,7 @@ export abstract class BaseService<T = any> {
     logger.debug("Setting error handler", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      errorType
+      errorType,
     });
 
     this.errorHandlers.set(errorType, handler);
@@ -1142,7 +1509,7 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       errorType,
-      error: error.message
+      error: error.message,
     });
 
     const handler = this.errorHandlers.get(errorType);
@@ -1154,7 +1521,7 @@ export abstract class BaseService<T = any> {
           schemaName: this.schemaName,
           tableName: this.tableName,
           errorType,
-          handlerError: (handlerError as Error).message
+          handlerError: (handlerError as Error).message,
         });
       }
     }
@@ -1168,17 +1535,29 @@ export abstract class BaseService<T = any> {
         schemaName: this.schemaName,
         tableName: this.tableName,
         dataType: typeof data,
-        isNull: data === null
+        isNull: data === null,
       });
       throw new Error(errorMsg);
     }
+
+    // ✅ THÊM: Loại bỏ các field có giá trị undefined
+    Object.keys(data).forEach((key) => {
+      if (data[key] === undefined) {
+        delete data[key];
+        logger.trace("Removed undefined field", {
+          schemaName: this.schemaName,
+          tableName: this.tableName,
+          field: key,
+        });
+      }
+    });
   }
 
   protected async _ensureInitialized(): Promise<void> {
     if (!this.isInitialized) {
       logger.debug("Service not initialized, initializing now", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
       await this.init();
     }
@@ -1187,14 +1566,14 @@ export abstract class BaseService<T = any> {
   private async ensureValidConnection(): Promise<void> {
     logger.trace("Ensuring valid database connection", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     try {
       const isConnected = this.dao?.isConnectionOpen();
       if (!isConnected) {
         logger.debug("Connection not valid, getting new connection", {
-          schemaName: this.schemaName
+          schemaName: this.schemaName,
         });
         this.dao = await DatabaseManager.ensureDatabaseConnection(
           this.schemaName
@@ -1203,7 +1582,7 @@ export abstract class BaseService<T = any> {
     } catch (error) {
       logger.warn("Error checking connection, getting new connection", {
         schemaName: this.schemaName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
       this.dao = await DatabaseManager.ensureDatabaseConnection(
         this.schemaName
@@ -1215,7 +1594,7 @@ export abstract class BaseService<T = any> {
   async getDatabaseInfo(): Promise<any> {
     logger.trace("Getting database info", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     await this._ensureInitialized();
@@ -1225,7 +1604,7 @@ export abstract class BaseService<T = any> {
   async getTableInfo(): Promise<any[]> {
     logger.trace("Getting table info", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     await this._ensureInitialized();
@@ -1248,13 +1627,13 @@ export abstract class BaseService<T = any> {
   async healthCheck(): Promise<HealthCheckResult> {
     logger.debug("Performing health check", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     try {
       await this._ensureInitialized();
       const count = await this.count();
-      
+
       const result = {
         healthy: true,
         schemaName: this.schemaName,
@@ -1265,7 +1644,7 @@ export abstract class BaseService<T = any> {
       logger.info("Health check passed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        recordCount: count
+        recordCount: count,
       });
 
       return result;
@@ -1280,7 +1659,7 @@ export abstract class BaseService<T = any> {
       logger.error("Health check failed", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       return result;
@@ -1293,14 +1672,14 @@ export abstract class BaseService<T = any> {
       schemaName: this.schemaName,
       tableName: this.tableName,
       isOpened: this.isOpened,
-      isInitialized: this.isInitialized
+      isInitialized: this.isInitialized,
     });
 
     try {
       if (this.dao) {
         await this.dao.close();
         logger.debug("DAO closed successfully", {
-          schemaName: this.schemaName
+          schemaName: this.schemaName,
         });
       }
 
@@ -1312,7 +1691,7 @@ export abstract class BaseService<T = any> {
 
       logger.info("BaseService closed successfully", {
         schemaName: this.schemaName,
-        tableName: this.tableName
+        tableName: this.tableName,
       });
 
       this._emit("closed", { schemaName: this.schemaName });
@@ -1321,7 +1700,7 @@ export abstract class BaseService<T = any> {
       logger.error("Error closing BaseService", {
         schemaName: this.schemaName,
         tableName: this.tableName,
-        error: (error as Error).message
+        error: (error as Error).message,
       });
 
       this._handleError("CLOSE_ERROR", error as Error);
@@ -1332,7 +1711,7 @@ export abstract class BaseService<T = any> {
   public destroy(): void {
     logger.debug("Destroying BaseService", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
 
     // Remove reconnect listener
@@ -1348,7 +1727,7 @@ export abstract class BaseService<T = any> {
 
     logger.trace("BaseService destroyed", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
   }
 
@@ -1359,7 +1738,7 @@ export abstract class BaseService<T = any> {
   ): Promise<T[]> {
     logger.trace("Using getAll alias", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
     return this.findAll(conditions, options);
   }
@@ -1368,7 +1747,7 @@ export abstract class BaseService<T = any> {
     logger.trace("Using getById alias", {
       schemaName: this.schemaName,
       tableName: this.tableName,
-      id
+      id,
     });
     return this.findById(id);
   }
@@ -1376,7 +1755,7 @@ export abstract class BaseService<T = any> {
   async getFirst(conditions: Record<string, any> = {}): Promise<T | null> {
     logger.trace("Using getFirst alias", {
       schemaName: this.schemaName,
-      tableName: this.tableName
+      tableName: this.tableName,
     });
     return this.findFirst(conditions);
   }

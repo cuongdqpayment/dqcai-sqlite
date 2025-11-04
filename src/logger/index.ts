@@ -1,4 +1,5 @@
-// src/logger/index.ts
+// in @dqcai/sqlite library
+// ./src/logger/index.ts
 
 import {
   BaseModule,
@@ -24,11 +25,26 @@ const SQLiteModules = {
   CONNECTION: "Connection",
 };
 
-const config = new LoggerConfigBuilder()
-  .setEnabled(true)
-  .setDefaultLevel("warn")
-  .build();
-// cập nhập cấu hình trong dự án này
-CommonLoggerConfig.updateConfiguration(config);
-console.log("@dqcai/sqlite logger update!");
+
+// ✅ Helper function để config logger
+export function configureSQLiteLogger(
+  enabled: boolean = true,
+  defaultLevel: 'trace' | 'debug' | 'info' | 'warn' | 'error' = 'warn'
+) {
+  console.log(`🔧 [SQLite] Configuring logger: enabled=${enabled}, level=${defaultLevel}`);
+  
+  const config = new LoggerConfigBuilder()
+    .setEnabled(enabled)
+    .setDefaultLevel(defaultLevel)
+    .build();
+    
+  CommonLoggerConfig.updateConfiguration(config);
+  
+  console.log("✅ [SQLite] Logger configured:", CommonLoggerConfig.getCurrentConfig());
+}
+
+// khởi tạo default config cho thư viện
+configureSQLiteLogger(true, 'warn');
+
+// ✅ Export utilities only
 export { BaseModule, createModuleLogger, SQLiteModules, CommonLoggerConfig };

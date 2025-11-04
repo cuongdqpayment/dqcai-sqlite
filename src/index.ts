@@ -1,6 +1,6 @@
 // src/index.ts - Main exports for UniversalSQLite Library with Logger Integration
 // ========================== LOGGER EXPORTS ==========================
-export { SQLiteModules } from "./logger";
+export { SQLiteModules, configureSQLiteLogger } from "./logger";
 
 // ========================== CORE EXPORTS ==========================
 export { UniversalDAO } from "./core/universal-dao";

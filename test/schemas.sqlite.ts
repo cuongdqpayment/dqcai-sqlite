@@ -2,7 +2,7 @@ import { DatabaseSchema, SQLITE_TYPE_MAPPING } from "@dqcai/sqlite";
 
 const core: DatabaseSchema = {
   version: "v1",
-  database_name: "core.db",
+  database_name: "temp/core.db",
   description:
     "Cơ sở dữ liệu hệ thống cốt lõi quản lý toàn bộ hoạt động của doanh nghiệp, bao gồm thông tin doanh nghiệp, cửa hàng và người dùng",
   type_mapping: SQLITE_TYPE_MAPPING,
