@@ -1,6 +1,6 @@
 {
   "name": "@dqcai/sqlite",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "type": "module",
   "description": "Universal SQLite adapter for Node.js, Browser, Deno, Bun, and React Native with a unified API and query builder.",
   "main": "lib/index.js",
