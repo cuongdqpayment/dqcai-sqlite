@@ -4,9 +4,8 @@
   "type": "module",
   "description": "Universal SQLite adapter for Node.js, Browser, Deno, Bun, and React Native with a unified API and query builder.",
   "main": "lib/index.js",
-  "types": "lib/index.d.ts",
   "module": "lib/index.mjs",
-  "browser": "lib/index.umd.js",
+  "types": "lib/index.d.ts",
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
@@ -23,8 +22,7 @@
   },
   "files": [
     "lib",
-    "README.md",
-    "README.html"
+    "README.md"
   ],
   "scripts": {
     "build": "rollup -c rollup.config.js",
