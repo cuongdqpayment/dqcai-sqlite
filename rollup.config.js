@@ -5,7 +5,7 @@ import esbuild from 'rollup-plugin-esbuild'
 
 export default {
   input: 'src/index.ts', // Điểm vào từ mã TypeScript. -- phương án build trong tham số lệnh
-  external: [], // Không có external deps
+  external: ['axios', 'react-native', 'react-native-sqlite-storage', 'crypto'], // Rất quan trọng
   output: [
     {
       dir: 'lib',
