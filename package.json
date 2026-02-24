@@ -80,22 +80,6 @@
     "rollup-plugin-esbuild": "^6.2.1",
     "typescript": "^5.9.2"
   },
-  "peerDependencies": {
-    "better-sqlite3": "^12.4.1",
-    "react-native": ">=0.60.0",
-    "react-native-sqlite-storage": "^6.0.0"
-  },
-  "peerDependenciesMeta": {
-    "better-sqlite3": {
-      "optional": true
-    },
-    "react-native": {
-      "optional": true
-    },
-    "react-native-sqlite-storage": {
-      "optional": true
-    }
-  },
   "overrides": {
     "glob": "^11.0.3",
     "rimraf": "^6.0.1"
